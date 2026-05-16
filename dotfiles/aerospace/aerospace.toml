@@ -1,0 +1,44 @@
+exec-on-workspace-change = [
+  "/bin/bash", "-c",
+  "printf 'aerospace ws %s' \"$AEROSPACE_FOCUSED_WORKSPACE\" | nc -u -w0 127.0.0.1 9001"
+]
+
+[gaps]
+inner.horizontal = 7
+inner.vertical   = 7
+outer.left       = 7
+outer.right      = 7
+outer.top        = 7
+outer.bottom     = 7
+
+[workspace-to-monitor-force-assignment]
+1 = "main"
+2 = "main"
+3 = "main"
+4 = "secondary"
+5 = "secondary"
+6 = "secondary"
+
+[[on-window-detected]]
+run = "layout floating"
+
+[mode.main.binding]
+ctrl-alt-cmd-left        = "workspace prev"
+ctrl-alt-cmd-right       = "workspace next"
+
+ctrl-alt-cmd-shift-left  = ["move-node-to-workspace prev", "workspace prev"]
+ctrl-alt-cmd-shift-right = ["move-node-to-workspace next", "workspace next"]
+
+ctrl-alt-cmd-down = "focus-monitor next"
+ctrl-alt-cmd-up   = "focus-monitor prev"
+ctrl-alt-cmd-tab  = "focus-monitor --wrap-around next"
+
+ctrl-alt-cmd-m = "exec-and-forget sh $HOME/.config/aerospace/toggle-layout.sh"
+
+ctrl-alt-cmd-j     = "focus left"
+ctrl-alt-cmd-k     = "focus down"
+ctrl-alt-cmd-l     = "focus right"
+ctrl-alt-cmd-i     = "focus up"
+
+ctrl-alt-cmd-minus = "resize smart -50"
+ctrl-alt-cmd-equal = "resize smart +50"
