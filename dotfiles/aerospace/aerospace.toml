@@ -7,7 +7,7 @@ exec-on-workspace-change = [
 inner.horizontal = 7
 inner.vertical   = 7
 outer.left       = 7
-outer.right      = 7
+outer.right      = 55
 outer.top        = 7
 outer.bottom     = 7
 

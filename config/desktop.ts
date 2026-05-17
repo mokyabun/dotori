@@ -1,6 +1,8 @@
 import type { Context } from '../src/context'
 
 export default (ctx: Context) => {
+    ctx.brew.install('macmon')
+
     // Aerospace
     ctx.brew.tap('nikitabobko/tap')
     ctx.brew.cask('aerospace')

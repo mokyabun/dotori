@@ -9,10 +9,19 @@ export default (ctx: Context) => {
     ctx.brew.install('mas')
     ctx.brew.cask('vesktop')
     ctx.brew.cask('parsec')
+    ctx.brew.cask('brave-browser')
+    ctx.brew.cask('linearmouse')
+    ctx.brew.cask('jordanbaird-ice')
+
+    ctx.brew.cask('font-jetbrains-mono-nerd-font')
 
     ctx.group('settings', (g) => settings(g), {
         hooks: {
             afterChange: [
+                [
+                    'killall',
+                    'cfprefsd',
+                ],
                 [
                     'sudo',
                     '-u',

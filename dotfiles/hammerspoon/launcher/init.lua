@@ -1,94 +1,110 @@
-local config   = require("launcher.constants")
-local db       = require("launcher.db")
-local apps     = require("launcher.apps")
+local config = require("launcher.constants")
+local db = require("launcher.db")
+local apps = require("launcher.apps")
 local frecency = require("launcher.frecency")
 local commands = require("launcher.commands")
 
-local _chooser
-local _appWatcher
-local _registry = {}
+local chooser
+local appWatcher
+local registry = {}
+local pendingLaunches = {}
 
 local function buildChoices()
-  _registry = {}
+	registry = {}
 
-  local running = {}
-  for _, app in ipairs(hs.application.runningApplications()) do
-    local name = app:name()
-    if name then running[name] = true end
-  end
+	local runningApps = {}
+	for _, app in ipairs(hs.application.runningApplications()) do
+		local name = app:name()
+		if name then
+			runningApps[name] = true
+		end
+	end
 
-  local list = {}
-  for _, a in ipairs(apps.cache) do list[#list + 1] = a end
-  frecency.sort(list)
+	local appList = {}
+	for _, app in ipairs(apps.cache) do
+		appList[#appList + 1] = app
+	end
+	frecency.sort(appList)
 
-  local choices = {}
+	local choices = {}
 
-  for _, a in ipairs(list) do
-    local key = "app:" .. a.bundleId
-    _registry[key] = { kind = "app", path = a.path, bundleId = a.bundleId }
-    choices[#choices + 1] = {
-      text    = a.name,
-      subText = running[a.name] and "Running" or "",
-      image   = a.icon,
-      uuid    = key,
-    }
-  end
+	for _, app in ipairs(appList) do
+		local key = "app:" .. app.bundleId
+		registry[key] = { kind = "app", path = app.path, bundleId = app.bundleId }
+		choices[#choices + 1] = {
+			text = app.name,
+			subText = runningApps[app.name] and "Running" or "",
+			image = app.icon,
+			uuid = key,
+		}
+	end
 
-  for i, cmd in ipairs(commands) do
-    local key = "cmd:" .. i
-    _registry[key] = { kind = "cmd", fn = cmd.fn }
-    choices[#choices + 1] = {
-      text    = cmd.text,
-      subText = type(cmd.subText) == "function" and cmd.subText() or (cmd.subText or ""),
-      image   = cmd.icon,
-      uuid    = key,
-    }
-  end
+	for index, command in ipairs(commands) do
+		local key = "cmd:" .. index
+		registry[key] = { kind = "cmd", fn = command.fn }
+		choices[#choices + 1] = {
+			text = command.text,
+			subText = type(command.subText) == "function" and command.subText() or (command.subText or ""),
+			image = command.icon,
+			uuid = key,
+		}
+	end
 
-  return choices
+	return choices
 end
 
 local function onChoice(item)
-  if not item then return end
-  local handler = _registry[item.uuid]
-  if not handler then return end
-  if handler.kind == "cmd" then
-    handler.fn()
-  else
-    frecency.record(handler.bundleId)
-    hs.application.open(handler.path)
-  end
+	if not item then
+		return
+	end
+	local handler = registry[item.uuid]
+	if not handler then
+		return
+	end
+	if handler.kind == "cmd" then
+		handler.fn()
+	else
+		frecency.record(handler.bundleId)
+		pendingLaunches[handler.bundleId] = true
+		hs.task.new("/usr/bin/open", nil, { handler.path }):start()
+	end
 end
 
 local function show()
-  _chooser:choices(buildChoices())
-  _chooser:show()
+	chooser:choices(buildChoices())
+	chooser:show()
 end
 
 local database = db.open()
 frecency.init(database)
 
-_chooser = hs.chooser.new(onChoice)
-_chooser:placeholderText("Search apps and commands…")
-_chooser:searchSubText(false)
-_chooser:width(config.chooser.width)
-_chooser:rows(config.chooser.rows)
-_chooser:bgDark(true)
-_chooser:fgColor(config.chooser.fgColor)
-_chooser:subTextColor(config.chooser.subTextColor)
+chooser = hs.chooser.new(onChoice)
+chooser:placeholderText("Search apps and commands…")
+chooser:searchSubText(false)
+chooser:width(config.chooser.width)
+chooser:rows(config.chooser.rows)
+chooser:bgDark(true)
+chooser:fgColor(config.chooser.fgColor)
+chooser:subTextColor(config.chooser.subTextColor)
 
 apps.start(function()
-  if _chooser:isVisible() then
-    _chooser:choices(buildChoices())
-  end
+	if chooser:isVisible() then
+		chooser:choices(buildChoices())
+	end
 end)
 
-_appWatcher = hs.application.watcher.new(function(_, event, app)
-  if event == hs.application.watcher.launched and app then
-    local bundleId = app:bundleID()
-    if bundleId then frecency.record(bundleId) end
-  end
+appWatcher = hs.application.watcher.new(function(_, event, app)
+	if event == hs.application.watcher.launched and app then
+		local bundleId = app:bundleID()
+		if bundleId then
+			if pendingLaunches[bundleId] then
+				pendingLaunches[bundleId] = nil
+			else
+				frecency.record(bundleId)
+			end
+		end
+	end
 end)
-_appWatcher:start()
+appWatcher:start()
 
 hs.hotkey.bind(config.hotkey.mods, config.hotkey.key, show)
