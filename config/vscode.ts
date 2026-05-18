@@ -11,6 +11,7 @@ export default (ctx: Context) => {
                 '[lua]': {
                     'editor.defaultFormatter': 'JohnnyMorganz.stylua',
                 },
+                'terminal.integrated.fontFamily': 'JetBrainsMono Nerd Font'
             },
         })
     })

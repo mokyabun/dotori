@@ -3,6 +3,7 @@ import settings from './settings'
 import desktop from './desktop'
 import development from './development'
 import vscode from './vscode'
+import shell from './shell'
 
 export default (ctx: Context) => {
     ctx.brew.install('git')
@@ -36,4 +37,5 @@ export default (ctx: Context) => {
     ctx.group('desktop', (g) => desktop(g))
     ctx.group('development', (g) => development(g))
     ctx.group('vscode', (g) => vscode(g))
+    ctx.group('shell', (g) => shell(g))
 }
