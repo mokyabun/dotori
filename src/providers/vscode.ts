@@ -1,15 +1,44 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { z } from 'zod'
 import type { Step, PlanContext, ApplyContext, PlanResult, StepHooks } from '../types'
+import { StepHooksSchema } from '../types'
 import { run } from '../utils/shell'
 import { jsonPatch, removeKeys } from '../utils/json'
 import { atomicWriteJson } from '../utils/atomic'
+import { shouldSave, noopOrAdopt } from '../utils/plan'
 
 type SettingsMode = 'patch' | 'replace'
 
+export const KeybindingSchema = z.object({
+    key: z.string(),
+    command: z.string(),
+    when: z.string().optional(),
+    args: z.record(z.string(), z.unknown()).optional(),
+})
+
+export const ProfileConfigSchema = z.object({
+    location: z.string().optional(),
+    settings: z
+        .object({
+            mode: z.enum(['patch', 'replace']),
+            values: z.record(z.string(), z.unknown()),
+        })
+        .optional(),
+    extensions: z.array(z.string()).optional(),
+    keybindings: z.array(KeybindingSchema).optional(),
+    tasks: z.record(z.string(), z.unknown()).optional(),
+    mcp: z.record(z.string(), z.unknown()).optional(),
+    languageSnippets: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
+    globalSnippets: z.record(z.string(), z.unknown()).optional(),
+    hooks: StepHooksSchema.optional(),
+})
+
+export type Keybinding = z.infer<typeof KeybindingSchema>
+export type ProfileConfig = z.infer<typeof ProfileConfigSchema>
+
 const VSCODE_USER_DIR = path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User')
-const SETTINGS_PATH = path.join(VSCODE_USER_DIR, 'settings.json')
 const STORAGE_PATH = path.join(VSCODE_USER_DIR, 'globalStorage', 'storage.json')
 
 function readJsonFile(filePath: string): Record<string, unknown> {
@@ -20,162 +49,116 @@ function readJsonFile(filePath: string): Record<string, unknown> {
     }
 }
 
-export class VscodeProfileBuilder {
-    constructor(
-        private readonly name: string,
-        private readonly location: string,
-        private readonly push: (step: Step) => void,
-    ) { }
+function settingsPath(name: string): string {
+    return name === 'default'
+        ? path.join(VSCODE_USER_DIR, 'settings.json')
+        : path.join(VSCODE_USER_DIR, 'profiles', name, 'settings.json')
+}
 
-    settings(
-        suffix: string,
-        options: { mode: SettingsMode; values: Record<string, unknown>; hooks?: StepHooks },
-    ): void {
-        this.push(this.settingsStep(suffix, options.mode, options.values, options.hooks))
-    }
+function keybindingsPath(name: string): string {
+    return name === 'default'
+        ? path.join(VSCODE_USER_DIR, 'keybindings.json')
+        : path.join(VSCODE_USER_DIR, 'profiles', name, 'keybindings.json')
+}
 
-    extension(extensionId: string): void {
-        this.push(this.extensionStep(extensionId))
-    }
+function tasksPath(name: string): string {
+    return name === 'default'
+        ? path.join(VSCODE_USER_DIR, 'tasks.json')
+        : path.join(VSCODE_USER_DIR, 'profiles', name, 'tasks.json')
+}
 
-    private settingsStep(
-        suffix: string,
-        mode: SettingsMode,
-        values: Record<string, unknown>,
-        hooks?: StepHooks,
-    ): Step {
-        const { name: profileName, location: profileLocation } = this
-        const settingsPath = path.join(VSCODE_USER_DIR, 'profiles', profileLocation, 'settings.json')
-        const id = `vscode.profile.${profileName}.settings.${suffix}`
+function mcpPath(name: string): string {
+    return name === 'default'
+        ? path.join(VSCODE_USER_DIR, 'mcp.json')
+        : path.join(VSCODE_USER_DIR, 'profiles', name, 'mcp.json')
+}
 
-        return {
-            id,
-            kind: 'vscode.profile.settings',
-            title: `vscode profile ${profileName} settings ${mode} (${suffix})`,
-            hooks,
-            async plan(ctx: PlanContext): Promise<PlanResult> {
-                const applied = await ctx.getAppliedState(id)
-                const existing = readJsonFile(settingsPath)
-
-                if (mode === 'replace') {
-                    if (JSON.stringify(existing) === JSON.stringify(values)) {
-                        return applied
-                            ? { action: 'noop', message: 'vscode profile settings already correct', changed: false }
-                            : { action: 'adopt', message: 'vscode profile settings already correct (adopt)', changed: false }
-                    }
-                    return { action: 'update', message: `will replace vscode profile ${profileName} settings`, changed: true }
-                }
-
-                const { changedKeys } = jsonPatch(existing, values)
-                if (changedKeys.length === 0) {
-                    return applied
-                        ? { action: 'noop', message: 'vscode profile settings already correct', changed: false }
-                        : { action: 'adopt', message: 'vscode profile settings already correct (adopt)', changed: false }
-                }
-                return {
-                    action: 'update',
-                    message: `will patch vscode profile ${profileName} settings (keys: ${changedKeys.join(', ')})`,
-                    changed: true,
-                }
-            },
-            async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
-                if (plan.action === 'create' || plan.action === 'update') {
-                    const existing = readJsonFile(settingsPath)
-                    let result: Record<string, unknown>
-
-                    if (mode === 'replace') {
-                        result = values
-                    } else {
-                        result = jsonPatch(existing, values).result
-                        const prevApplied = await ctx.getAppliedState(id)
-                        const prevKeys = prevApplied?.details?.['keys']
-                        if (Array.isArray(prevKeys)) {
-                            const removed = (prevKeys as string[]).filter((k) => !(k in values))
-                            result = removeKeys(result, removed)
-                        }
-                    }
-                    atomicWriteJson(settingsPath, result)
-                }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
-                    await ctx.saveAppliedState({
-                        id,
-                        kind: 'vscode.profile.settings',
-                        details: { path: settingsPath, mode, keys: Object.keys(values) },
-                    })
-                }
-            },
-        }
-    }
-
-    private extensionStep(extensionId: string): Step {
-        const { name: profileName } = this
-        const id = `vscode.profile.${profileName}.extension.${extensionId}`
-        return {
-            id,
-            kind: 'vscode.profile.extension',
-            title: `vscode profile ${profileName} extension ${extensionId}`,
-            async plan(ctx: PlanContext): Promise<PlanResult> {
-                const applied = await ctx.getAppliedState(id)
-                const { stdout } = Bun.spawnSync(['code', '--profile', profileName, '--list-extensions'])
-                const installed = new Set(
-                    stdout
-                        .toString()
-                        .split('\n')
-                        .map((s) => s.trim())
-                        .filter(Boolean),
-                )
-                if (installed.has(extensionId)) {
-                    return applied
-                        ? { action: 'noop', message: `${extensionId} already installed in profile ${profileName}`, changed: false }
-                        : { action: 'adopt', message: `${extensionId} already installed in profile ${profileName} (adopt)`, changed: false }
-                }
-                return { action: 'create', message: `will install extension ${extensionId} in profile ${profileName}`, changed: true }
-            },
-            async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
-                if (plan.action === 'create') {
-                    await run(['code', '--profile', profileName, '--install-extension', extensionId])
-                }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
-                    await ctx.saveAppliedState({ id, kind: 'vscode.profile.extension', details: { extensionId, profileName } })
-                }
-            },
-        }
-    }
+function snippetsDir(name: string): string {
+    return name === 'default'
+        ? path.join(VSCODE_USER_DIR, 'snippets')
+        : path.join(VSCODE_USER_DIR, 'profiles', name, 'snippets')
 }
 
 export class VscodeProvider {
     constructor(private readonly push: (step: Step) => void) { }
 
-    settings(
-        suffix: string,
-        options: { mode: SettingsMode; values: Record<string, unknown>; hooks?: StepHooks },
-    ): void {
-        this.push(this.settingsStep(suffix, options.mode, options.values, options.hooks))
-    }
+    profile(name: string, config: ProfileConfig): void {
+        const {
+            location = name,
+            settings,
+            extensions,
+            keybindings,
+            tasks,
+            mcp,
+            languageSnippets,
+            globalSnippets,
+            hooks,
+        } = ProfileConfigSchema.parse(config)
 
-    extension(extensionId: string): void {
-        this.push(this.extensionStep(extensionId))
-    }
-
-    profile(
-        name: string,
-        optionsOrFn: { location?: string; hooks?: StepHooks } | ((p: VscodeProfileBuilder) => void),
-        fn?: (p: VscodeProfileBuilder) => void,
-    ): void {
-        let options: { location?: string; hooks?: StepHooks } = {}
-        let builderFn: (p: VscodeProfileBuilder) => void
-
-        if (typeof optionsOrFn === 'function') {
-            builderFn = optionsOrFn
-        } else {
-            options = optionsOrFn
-            builderFn = fn!
+        if (name !== 'default') {
+            this.push(this.profileStep(name, location, hooks))
         }
+        if (settings) {
+            this.push(this.settingsStep(name, settings.mode, settings.values, hooks))
+        }
+        for (const ext of extensions ?? []) {
+            this.push(this.extensionStep(name, ext))
+        }
+        if (keybindings?.length) {
+            this.push(this.keybindingsStep(name, keybindings, hooks))
+        }
+        if (tasks && Object.keys(tasks).length > 0) {
+            this.push(this.tasksStep(name, tasks, hooks))
+        }
+        if (mcp && Object.keys(mcp).length > 0) {
+            this.push(this.mcpStep(name, mcp, hooks))
+        }
+        for (const [language, snippet] of Object.entries(languageSnippets ?? {})) {
+            this.push(this.languageSnippetStep(name, language, snippet, hooks))
+        }
+        if (globalSnippets && Object.keys(globalSnippets).length > 0) {
+            this.push(this.globalSnippetsStep(name, globalSnippets, hooks))
+        }
+    }
 
-        const location = options.location ?? name
-        this.push(this.profileStep(name, location, options.hooks))
-        const builder = new VscodeProfileBuilder(name, location, this.push)
-        builderFn(builder)
+    /**
+     * Shared factory for steps that simply compare a JSON file to a desired value
+     * and overwrite it when they differ.
+     */
+    private makeJsonEqualStep(params: {
+        id: string
+        kind: string
+        title: string
+        filePath: string
+        desired: unknown
+        details: Record<string, unknown>
+        hooks?: StepHooks
+        setup?: () => void
+    }): Step {
+        const { id, kind, title, filePath, desired, details, hooks, setup } = params
+        return {
+            id,
+            kind,
+            title,
+            hooks,
+            async plan(ctx: PlanContext): Promise<PlanResult> {
+                const applied = await ctx.getAppliedState(id)
+                const existing = readJsonFile(filePath)
+                if (JSON.stringify(existing) === JSON.stringify(desired)) {
+                    return noopOrAdopt(applied, `${title} already correct`)
+                }
+                return { action: 'update', message: `will update ${title}`, changed: true }
+            },
+            async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
+                if (plan.action === 'create' || plan.action === 'update') {
+                    setup?.()
+                    atomicWriteJson(filePath, desired)
+                }
+                if (shouldSave(plan.action)) {
+                    await ctx.saveAppliedState({ id, kind, details })
+                }
+            },
+        }
     }
 
     private profileStep(name: string, location: string, hooks?: StepHooks): Step {
@@ -190,12 +173,7 @@ export class VscodeProvider {
                 const storage = readJsonFile(STORAGE_PATH)
                 const profiles = (storage['userDataProfiles'] as Array<{ name: string; location: string }>) ?? []
                 const existing = profiles.find((p) => p.name === name)
-
-                if (existing?.location === location) {
-                    return applied
-                        ? { action: 'noop', message: `profile ${name} already registered`, changed: false }
-                        : { action: 'adopt', message: `profile ${name} already registered (adopt)`, changed: false }
-                }
+                if (existing?.location === location) return noopOrAdopt(applied, `profile ${name} already registered`)
                 return {
                     action: existing ? 'update' : 'create',
                     message: `will ${existing ? 'update' : 'create'} profile ${name}`,
@@ -208,58 +186,46 @@ export class VscodeProvider {
                     const profiles = (storage['userDataProfiles'] as Array<{ name: string; location: string }>) ?? []
                     const idx = profiles.findIndex((p) => p.name === name)
                     const entry = { name, location }
-                    if (idx >= 0) {
-                        profiles[idx] = entry
-                    } else {
-                        profiles.push(entry)
-                    }
+                    if (idx >= 0) profiles[idx] = entry
+                    else profiles.push(entry)
                     atomicWriteJson(STORAGE_PATH, { ...storage, userDataProfiles: profiles })
                 }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
+                if (shouldSave(plan.action)) {
                     await ctx.saveAppliedState({ id, kind: 'vscode.profile', details: { name, location } })
                 }
             },
         }
     }
 
-    private settingsStep(suffix: string, mode: SettingsMode, values: Record<string, unknown>, hooks?: StepHooks): Step {
-        const id = `vscode.settings.${suffix}`
-
+    private settingsStep(name: string, mode: SettingsMode, values: Record<string, unknown>, hooks?: StepHooks): Step {
+        const filePath = settingsPath(name)
+        const id = `vscode.${name}.settings`
         return {
             id,
             kind: 'vscode.settings',
-            title: `vscode settings ${mode} (${suffix})`,
+            title: `vscode ${name} settings (${mode})`,
             hooks,
             async plan(ctx: PlanContext): Promise<PlanResult> {
                 const applied = await ctx.getAppliedState(id)
-                const existing = readJsonFile(SETTINGS_PATH)
-
+                const existing = readJsonFile(filePath)
                 if (mode === 'replace') {
                     if (JSON.stringify(existing) === JSON.stringify(values)) {
-                        return applied
-                            ? { action: 'noop', message: 'vscode settings already correct', changed: false }
-                            : { action: 'adopt', message: 'vscode settings already correct (adopt)', changed: false }
+                        return noopOrAdopt(applied, `vscode ${name} settings already correct`)
                     }
-                    return { action: 'update', message: 'will replace vscode settings', changed: true }
+                    return { action: 'update', message: `will replace vscode ${name} settings`, changed: true }
                 }
-
                 const { changedKeys } = jsonPatch(existing, values)
-                if (changedKeys.length === 0) {
-                    return applied
-                        ? { action: 'noop', message: 'vscode settings already correct', changed: false }
-                        : { action: 'adopt', message: 'vscode settings already correct (adopt)', changed: false }
-                }
+                if (changedKeys.length === 0) return noopOrAdopt(applied, `vscode ${name} settings already correct`)
                 return {
                     action: 'update',
-                    message: `will patch vscode settings (keys: ${changedKeys.join(', ')})`,
+                    message: `will patch vscode ${name} settings (keys: ${changedKeys.join(', ')})`,
                     changed: true,
                 }
             },
             async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
                 if (plan.action === 'create' || plan.action === 'update') {
-                    const existing = readJsonFile(SETTINGS_PATH)
+                    const existing = readJsonFile(filePath)
                     let result: Record<string, unknown>
-
                     if (mode === 'replace') {
                         result = values
                     } else {
@@ -271,50 +237,150 @@ export class VscodeProvider {
                             result = removeKeys(result, removed)
                         }
                     }
-                    atomicWriteJson(SETTINGS_PATH, result)
+                    atomicWriteJson(filePath, result)
                 }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
+                if (shouldSave(plan.action)) {
                     await ctx.saveAppliedState({
                         id,
                         kind: 'vscode.settings',
-                        details: { path: SETTINGS_PATH, mode, keys: Object.keys(values) },
+                        details: { path: filePath, mode, keys: Object.keys(values) },
                     })
                 }
             },
         }
     }
 
-    private extensionStep(extensionId: string): Step {
-        const id = `vscode.extension.${extensionId}`
+    private extensionStep(profileName: string, extensionId: string): Step {
+        const id = `vscode.${profileName}.extension.${extensionId}`
+        const profileArgs = profileName === 'default' ? [] : ['--profile', profileName]
+        const extensionsDir = path.join(os.homedir(), '.vscode', 'extensions')
+
+        function isProperlyInstalled(): boolean {
+            const result = Bun.spawnSync(['code', ...profileArgs, '--list-extensions'])
+            if (result.exitCode !== 0) return false
+            const listed = new Set(
+                result.stdout
+                    .toString()
+                    .split('\n')
+                    .map((s) => s.trim().toLowerCase())
+                    .filter(Boolean),
+            )
+            if (!listed.has(extensionId.toLowerCase())) return false
+
+            // Verify the extension directory actually exists on disk.
+            // All extension files live in extensionsDir regardless of which profile they
+            // belong to — directories are named like `<publisher>.<name>-<version>`.
+            // This avoids parsing extensions.json, whose format differs between the global
+            // registry and per-profile registries.
+            try {
+                const prefix = extensionId.toLowerCase() + '-'
+                return fs
+                    .readdirSync(extensionsDir)
+                    .some(
+                        (dir) =>
+                            dir.toLowerCase().startsWith(prefix) &&
+                            fs.existsSync(path.join(extensionsDir, dir, 'package.json')),
+                    )
+            } catch {
+                return false
+            }
+        }
+
         return {
             id,
             kind: 'vscode.extension',
-            title: `vscode extension ${extensionId}`,
+            title: `vscode ${profileName} extension ${extensionId}`,
             async plan(ctx: PlanContext): Promise<PlanResult> {
                 const applied = await ctx.getAppliedState(id)
-                const { stdout } = Bun.spawnSync(['code', '--list-extensions'])
-                const installed = new Set(
-                    stdout
-                        .toString()
-                        .split('\n')
-                        .map((s) => s.trim())
-                        .filter(Boolean),
-                )
-                if (installed.has(extensionId)) {
-                    return applied
-                        ? { action: 'noop', message: `${extensionId} already installed`, changed: false }
-                        : { action: 'adopt', message: `${extensionId} already installed (adopt)`, changed: false }
-                }
-                return { action: 'create', message: `will install extension ${extensionId}`, changed: true }
+                if (isProperlyInstalled())
+                    return noopOrAdopt(applied, `${extensionId} already installed in ${profileName}`)
+                return { action: 'create', message: `will install ${extensionId} in ${profileName}`, changed: true }
             },
             async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
                 if (plan.action === 'create') {
-                    await run(['code', '--install-extension', extensionId])
+                    await run(['code', ...profileArgs, '--install-extension', extensionId])
                 }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
-                    await ctx.saveAppliedState({ id, kind: 'vscode.extension', details: { extensionId } })
+                if (shouldSave(plan.action)) {
+                    await ctx.saveAppliedState({ id, kind: 'vscode.extension', details: { extensionId, profileName } })
                 }
             },
         }
+    }
+
+    private keybindingsStep(name: string, keybindings: Keybinding[], hooks?: StepHooks): Step {
+        const filePath = keybindingsPath(name)
+        const id = `vscode.${name}.keybindings`
+        const filtered = keybindings.map(({ key, command, when, args }) => {
+            const entry: Record<string, unknown> = { key, command }
+            if (when != null) entry.when = when
+            if (args != null) entry.args = args
+            return entry
+        })
+        return this.makeJsonEqualStep({
+            id,
+            kind: 'vscode.keybindings',
+            title: `vscode ${name} keybindings`,
+            filePath,
+            desired: filtered,
+            details: { path: filePath },
+            hooks,
+        })
+    }
+
+    private tasksStep(name: string, tasks: Record<string, unknown>, hooks?: StepHooks): Step {
+        return this.makeJsonEqualStep({
+            id: `vscode.${name}.tasks`,
+            kind: 'vscode.tasks',
+            title: `vscode ${name} tasks`,
+            filePath: tasksPath(name),
+            desired: tasks,
+            details: { path: tasksPath(name) },
+            hooks,
+        })
+    }
+
+    private mcpStep(name: string, mcp: Record<string, unknown>, hooks?: StepHooks): Step {
+        return this.makeJsonEqualStep({
+            id: `vscode.${name}.mcp`,
+            kind: 'vscode.mcp',
+            title: `vscode ${name} mcp`,
+            filePath: mcpPath(name),
+            desired: mcp,
+            details: { path: mcpPath(name) },
+            hooks,
+        })
+    }
+
+    private languageSnippetStep(
+        profileName: string,
+        language: string,
+        snippet: Record<string, unknown>,
+        hooks?: StepHooks,
+    ): Step {
+        const filePath = path.join(snippetsDir(profileName), `${language}.json`)
+        return this.makeJsonEqualStep({
+            id: `vscode.${profileName}.snippets.${language}`,
+            kind: 'vscode.snippet',
+            title: `vscode ${profileName} ${language} snippets`,
+            filePath,
+            desired: snippet,
+            details: { path: filePath, language },
+            hooks,
+            setup: () => fs.mkdirSync(path.dirname(filePath), { recursive: true }),
+        })
+    }
+
+    private globalSnippetsStep(profileName: string, snippets: Record<string, unknown>, hooks?: StepHooks): Step {
+        const filePath = path.join(snippetsDir(profileName), 'global.code-snippets')
+        return this.makeJsonEqualStep({
+            id: `vscode.${profileName}.snippets.global`,
+            kind: 'vscode.snippet',
+            title: `vscode ${profileName} global snippets`,
+            filePath,
+            desired: snippets,
+            details: { path: filePath },
+            hooks,
+            setup: () => fs.mkdirSync(path.dirname(filePath), { recursive: true }),
+        })
     }
 }

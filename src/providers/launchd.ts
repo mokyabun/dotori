@@ -4,6 +4,7 @@ import os from 'node:os'
 import type { Step, PlanContext, ApplyContext, PlanResult, StepHooks } from '../types'
 import { atomicWriteFile } from '../utils/atomic'
 import { run, runSafe } from '../utils/shell'
+import { shouldSave, noopOrAdopt } from '../utils/plan'
 
 type LaunchAgentConfig = Record<string, unknown>
 
@@ -43,7 +44,7 @@ function buildPlistXml(obj: LaunchAgentConfig): string {
 }
 
 export class LaunchdProvider {
-    constructor(private readonly push: (step: Step) => void) {}
+    constructor(private readonly push: (step: Step) => void) { }
 
     agent(label: string, config: LaunchAgentConfig, hooks?: StepHooks): void {
         this.push(this.agentStep(label, config, hooks))
@@ -64,13 +65,9 @@ export class LaunchdProvider {
                 let existing = ''
                 try {
                     existing = fs.readFileSync(plistPath, 'utf8')
-                } catch {}
+                } catch { }
 
-                if (existing === desiredContent) {
-                    return applied
-                        ? { action: 'noop', message: `launchd agent ${label} already correct`, changed: false }
-                        : { action: 'adopt', message: `launchd agent ${label} already correct (adopt)`, changed: false }
-                }
+                if (existing === desiredContent) return noopOrAdopt(applied, `launchd agent ${label} already correct`)
                 return existing
                     ? { action: 'update', message: `will update launchd agent ${label}`, changed: true }
                     : { action: 'create', message: `will create launchd agent ${label}`, changed: true }
@@ -86,12 +83,8 @@ export class LaunchdProvider {
                     atomicWriteFile(plistPath, desiredContent)
                     await run(['launchctl', 'bootstrap', target, plistPath])
                 }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
-                    await ctx.saveAppliedState({
-                        id,
-                        kind: 'launchd.agent',
-                        details: { label, path: plistPath },
-                    })
+                if (shouldSave(plan.action)) {
+                    await ctx.saveAppliedState({ id, kind: 'launchd.agent', details: { label, path: plistPath } })
                 }
             },
         }

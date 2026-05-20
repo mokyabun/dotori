@@ -55,7 +55,7 @@ export default (ctx: Context) => {
                     },
                 },
                 // 입력 메뉴에서 다음 소스 선택
-                "61": { enabled: false },
+                '61': { enabled: false },
 
                 // Spotlight 검색창 열기
                 '64': {

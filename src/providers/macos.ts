@@ -2,6 +2,7 @@ import type { Step, PlanContext, ApplyContext, PlanResult, StepHooks } from '../
 import { resolvePlistPath, readPlist, writePlist } from '../utils/plist'
 import { deepMerge } from '../utils/json'
 import { run, runSafe } from '../utils/shell'
+import { shouldSave, noopOrAdopt } from '../utils/plan'
 
 type PlistMode = 'patch' | 'replace'
 type DefaultsValue = string | number | boolean
@@ -18,7 +19,7 @@ function defaultsExpectedString(val: DefaultsValue): string {
 }
 
 export class MacosProvider {
-    constructor(private readonly push: (step: Step) => void) {}
+    constructor(private readonly push: (step: Step) => void) { }
 
     defaults(
         id: string,
@@ -56,11 +57,7 @@ export class MacosProvider {
                 const removedKeys = prevKeys.filter((k) => !(k in values))
                 const allChanged = [...changedKeys, ...removedKeys]
 
-                if (allChanged.length === 0) {
-                    return applied
-                        ? { action: 'noop', message: `${domain} defaults already correct`, changed: false }
-                        : { action: 'adopt', message: `${domain} defaults already correct (adopt)`, changed: false }
-                }
+                if (allChanged.length === 0) return noopOrAdopt(applied, `${domain} defaults already correct`)
 
                 const parts: string[] = []
                 if (changedKeys.length > 0) parts.push(`update: ${changedKeys.join(', ')}`)
@@ -86,7 +83,7 @@ export class MacosProvider {
                         runSafe(['defaults', 'delete', domain, key])
                     }
                 }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
+                if (shouldSave(plan.action)) {
                     await ctx.saveAppliedState({
                         id,
                         kind: 'macos.defaults',
@@ -140,11 +137,7 @@ export class MacosProvider {
                 const removedKeys = prevKeys.filter((k) => !(k in values))
                 const allChanged = [...changedKeys, ...removedKeys]
 
-                if (allChanged.length === 0) {
-                    return applied
-                        ? { action: 'noop', message: `${domainOrPath} already correct`, changed: false }
-                        : { action: 'adopt', message: `${domainOrPath} already correct (adopt)`, changed: false }
-                }
+                if (allChanged.length === 0) return noopOrAdopt(applied, `${domainOrPath} already correct`)
 
                 const parts: string[] = []
                 if (changedKeys.length > 0) parts.push(`update: ${changedKeys.join(', ')}`)
@@ -173,16 +166,11 @@ export class MacosProvider {
 
                     writePlist(filePath, result)
                 }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
+                if (shouldSave(plan.action)) {
                     await ctx.saveAppliedState({
                         id,
                         kind: 'macos.plist',
-                        details: {
-                            domain: domainOrPath,
-                            path: filePath,
-                            mode,
-                            keys: Object.keys(values),
-                        },
+                        details: { domain: domainOrPath, path: filePath, mode, keys: Object.keys(values) },
                     })
                 }
             },

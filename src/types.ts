@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 export type PlanAction = 'noop' | 'create' | 'update' | 'remove' | 'adopt' | 'preserve' | 'error'
 
 export interface PlanResult {
@@ -7,12 +9,19 @@ export interface PlanResult {
     data?: unknown
 }
 
-export type HookCommand = string | string[] | { command: string[]; description?: string }
+export const HookCommandSchema = z.union([
+    z.string(),
+    z.array(z.string()),
+    z.object({ command: z.array(z.string()), description: z.string().optional() }),
+])
 
-export interface StepHooks {
-    afterChange?: HookCommand[]
-    afterApply?: HookCommand[]
-}
+export const StepHooksSchema = z.object({
+    afterChange: z.array(HookCommandSchema).optional(),
+    afterApply: z.array(HookCommandSchema).optional(),
+})
+
+export type HookCommand = z.infer<typeof HookCommandSchema>
+export type StepHooks = z.infer<typeof StepHooksSchema>
 
 export interface Step {
     id: string

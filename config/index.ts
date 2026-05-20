@@ -19,10 +19,7 @@ export default (ctx: Context) => {
     ctx.group('settings', (g) => settings(g), {
         hooks: {
             afterChange: [
-                [
-                    'killall',
-                    'cfprefsd',
-                ],
+                ['killall', 'cfprefsd'],
                 [
                     'sudo',
                     '-u',

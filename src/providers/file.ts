@@ -4,6 +4,7 @@ import type { Step, PlanContext, ApplyContext, PlanResult, StepHooks } from '../
 import { resolvePath } from '../utils/path'
 import { atomicWriteFile, atomicWriteJson } from '../utils/atomic'
 import { jsonPatch, removeKeys } from '../utils/json'
+import { shouldSave, noopOrAdopt } from '../utils/plan'
 
 type JsonMode = 'patch' | 'replace'
 
@@ -18,7 +19,7 @@ export class FileProvider {
     constructor(
         private readonly push: (step: Step) => void,
         private readonly configCwd: string,
-    ) {}
+    ) { }
 
     symlink(linkPath: string, target: string): void {
         this.push(this.symlinkStep(linkPath, target))
@@ -30,6 +31,10 @@ export class FileProvider {
 
     json(filePath: string, options: { mode: JsonMode; values: Record<string, unknown>; hooks?: StepHooks }): void {
         this.push(this.jsonFileStep(filePath, options.mode, options.values, options.hooks))
+    }
+
+    download(destPath: string, url: string): void {
+        this.push(this.downloadStep(destPath, url))
     }
 
     private symlinkStep(linkPath: string, target: string): Step {
@@ -47,13 +52,9 @@ export class FileProvider {
                 try {
                     const stat = fs.lstatSync(resolvedLink)
                     if (stat.isSymbolicLink()) existing = fs.readlinkSync(resolvedLink)
-                } catch {}
+                } catch { }
 
-                if (existing === resolvedTarget) {
-                    return applied
-                        ? { action: 'noop', message: `symlink ${linkPath} already correct`, changed: false }
-                        : { action: 'adopt', message: `symlink ${linkPath} already correct (adopt)`, changed: false }
-                }
+                if (existing === resolvedTarget) return noopOrAdopt(applied, `symlink ${linkPath} already correct`)
                 if (existing !== null) {
                     return {
                         action: 'update',
@@ -72,10 +73,10 @@ export class FileProvider {
                     fs.mkdirSync(path.dirname(resolvedLink), { recursive: true })
                     try {
                         fs.unlinkSync(resolvedLink)
-                    } catch {}
+                    } catch { }
                     fs.symlinkSync(resolvedTarget, resolvedLink)
                 }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
+                if (shouldSave(plan.action)) {
                     await ctx.saveAppliedState({
                         id,
                         kind: 'file.symlink',
@@ -94,7 +95,7 @@ export class FileProvider {
         const desired = `${start}\n${content}\n${end}`
         const blockRegex = new RegExp(`${escapeRegex(start)}[\\s\\S]*?${escapeRegex(end)}`, 'g')
 
-        function readFile(): string {
+        function readContent(): string {
             try {
                 return fs.readFileSync(resolvedFile, 'utf8')
             } catch {
@@ -108,35 +109,27 @@ export class FileProvider {
             title: `text block ${marker} in ${filePath}`,
             async plan(ctx: PlanContext): Promise<PlanResult> {
                 const applied = await ctx.getAppliedState(id)
-                const fileContent = readFile()
+                const fileContent = readContent()
 
                 if (fileContent.includes(start)) {
                     const current = fileContent.match(blockRegex)?.[0]
-                    if (current === desired) {
-                        return applied
-                            ? { action: 'noop', message: `block ${marker} already correct`, changed: false }
-                            : { action: 'adopt', message: `block ${marker} already correct (adopt)`, changed: false }
-                    }
+                    if (current === desired) return noopOrAdopt(applied, `block ${marker} already correct`)
                     return { action: 'update', message: `will update block ${marker} in ${filePath}`, changed: true }
                 }
                 return { action: 'create', message: `will insert block ${marker} into ${filePath}`, changed: true }
             },
             async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
                 if (plan.action === 'create' || plan.action === 'update') {
-                    let fileContent = readFile()
+                    let fileContent = readContent()
                     fileContent = fileContent.includes(start)
                         ? fileContent.replace(blockRegex, desired)
                         : fileContent
-                          ? `${fileContent}\n${desired}\n`
-                          : `${desired}\n`
+                            ? `${fileContent}\n${desired}\n`
+                            : `${desired}\n`
                     atomicWriteFile(resolvedFile, fileContent)
                 }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
-                    await ctx.saveAppliedState({
-                        id,
-                        kind: 'file.block',
-                        details: { path: resolvedFile, marker },
-                    })
+                if (shouldSave(plan.action)) {
+                    await ctx.saveAppliedState({ id, kind: 'file.block', details: { path: resolvedFile, marker } })
                 }
             },
         }
@@ -165,19 +158,13 @@ export class FileProvider {
 
                 if (mode === 'replace') {
                     if (JSON.stringify(existing) === JSON.stringify(values)) {
-                        return applied
-                            ? { action: 'noop', message: `${filePath} already correct`, changed: false }
-                            : { action: 'adopt', message: `${filePath} already correct (adopt)`, changed: false }
+                        return noopOrAdopt(applied, `${filePath} already correct`)
                     }
                     return { action: 'update', message: `will replace ${filePath}`, changed: true }
                 }
 
                 const { changedKeys } = jsonPatch(existing, values)
-                if (changedKeys.length === 0) {
-                    return applied
-                        ? { action: 'noop', message: `${filePath} already correct`, changed: false }
-                        : { action: 'adopt', message: `${filePath} already correct (adopt)`, changed: false }
-                }
+                if (changedKeys.length === 0) return noopOrAdopt(applied, `${filePath} already correct`)
                 return {
                     action: Object.keys(existing).length > 0 ? 'update' : 'create',
                     message: `will patch ${filePath} (keys: ${changedKeys.join(', ')})`,
@@ -202,12 +189,40 @@ export class FileProvider {
                     }
                     atomicWriteJson(resolvedFile, result)
                 }
-                if (plan.action !== 'noop' && plan.action !== 'preserve' && plan.action !== 'error') {
+                if (shouldSave(plan.action)) {
                     await ctx.saveAppliedState({
                         id,
                         kind: 'file.json',
                         details: { path: resolvedFile, mode, keys: Object.keys(values) },
                     })
+                }
+            },
+        }
+    }
+    private downloadStep(destPath: string, url: string): Step {
+        const resolvedDest = resolvePath(destPath, this.configCwd)
+        const id = `file.download.${resolvedDest}`
+
+        return {
+            id,
+            kind: 'file.download',
+            title: `download ${path.basename(resolvedDest)}`,
+            async plan(ctx: PlanContext): Promise<PlanResult> {
+                const applied = await ctx.getAppliedState(id)
+                const exists = fs.existsSync(resolvedDest)
+                if (exists) return noopOrAdopt(applied, `${destPath} already exists`)
+                return { action: 'create', message: `will download ${url} → ${destPath}`, changed: true }
+            },
+            async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
+                if (plan.action === 'create') {
+                    const res = await fetch(url)
+                    if (!res.ok) throw new Error(`Failed to download ${url}: ${res.status} ${res.statusText}`)
+                    const buf = await res.arrayBuffer()
+                    fs.mkdirSync(path.dirname(resolvedDest), { recursive: true })
+                    fs.writeFileSync(resolvedDest, Buffer.from(buf))
+                }
+                if (shouldSave(plan.action)) {
+                    await ctx.saveAppliedState({ id, kind: 'file.download', details: { path: resolvedDest, url } })
                 }
             },
         }
@@ -222,7 +237,7 @@ export function cleanSymlink(linkPath: string, target: string): void {
         if (stat.isSymbolicLink() && fs.readlinkSync(linkPath) === target) {
             fs.unlinkSync(linkPath)
         }
-    } catch {}
+    } catch { }
 }
 
 export function cleanTextBlock(filePath: string, marker: string): void {
@@ -233,5 +248,5 @@ export function cleanTextBlock(filePath: string, marker: string): void {
         let content = fs.readFileSync(filePath, 'utf8')
         content = content.replace(blockRegex, '\n').replace(/\n{3,}/g, '\n\n')
         atomicWriteFile(filePath, content)
-    } catch {}
+    } catch { }
 }
