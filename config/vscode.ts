@@ -1,5 +1,12 @@
 import type { Context } from '../src/context'
 
+const BASE_EXTENSIONS = [
+    'GitHub.copilot-chat',
+    'Catppuccin.catppuccin-vsc',
+    'thang-nm.catppuccin-perfect-icons',
+    'EditorConfig.EditorConfig',
+]
+
 const BASE_SETTINGS = {
     'editor.fontSize': 12,
     'editor.tabSize': 4,
@@ -35,7 +42,8 @@ const BASE_SETTINGS = {
 
     'explorer.fileNesting.enabled': true,
     'explorer.fileNesting.patterns': {
-        'package.json': 'package-lock.json, bun.lock, pnpm-lock.yaml, yarn.lock',
+        'package.json':
+            'package-lock.json, bun.lock, pnpm-lock.yaml, yarn.lock, biome.json, README.md, tsconfig*.json, *.code-workspace, .gitignore, components.json, vite.config.js, vite.config.ts',
         '*.ts': '${capture}.test.ts, ${capture}.spec.ts',
         '*.js': '${capture}.test.js, ${capture}.spec.js',
     },
@@ -48,69 +56,64 @@ const BASE_SETTINGS = {
         '**/dist': true,
         '**/.git': true,
     },
+
+    'workbench.colorTheme': 'Catppuccin Mocha',
+    'workbench.iconTheme': 'Catppuccin Perfect Mocha',
 }
 
 export default (ctx: Context) => {
     ctx.brew.cask('visual-studio-code')
 
-    ctx.vscode.profile('default', {
-        settings: {
-            mode: 'patch',
-            values: {
-                ...BASE_SETTINGS,
-                '[lua]': {
-                    'editor.defaultFormatter': 'JohnnyMorganz.stylua',
-                },
-                '[nix]': {
-                    'editor.tabSize': 2,
-                },
-                '[json][jsonc]': {
-                    'editor.tabSize': 2,
-                },
-                '[yaml]': {
-                    'editor.tabSize': 2,
-                },
-            },
+    ctx.vscode.settings('default', 'patch', {
+        ...BASE_SETTINGS,
+        '[lua]': {
+            'editor.defaultFormatter': 'JohnnyMorganz.stylua',
         },
-        extensions: ['GitHub.copilot-chat'],
+        '[nix]': {
+            'editor.tabSize': 2,
+        },
+        '[json][jsonc]': {
+            'editor.tabSize': 2,
+        },
+        '[yaml]': {
+            'editor.tabSize': 2,
+        },
     })
+    ctx.vscode.extensions('default', BASE_EXTENSIONS)
 
-    ctx.vscode.profile('node', {
-        settings: {
-            mode: 'patch',
-            values: {
-                ...BASE_SETTINGS,
-                'editor.tabSize': 2,
-                'editor.defaultFormatter': 'esbenp.prettier-vscode',
-                '[typescript][javascript][typescriptreact][javascriptreact]': {
-                    'editor.defaultFormatter': 'esbenp.prettier-vscode',
-                },
-            },
+    ctx.vscode.profile('node')
+    ctx.vscode.settings('node', 'patch', {
+        ...BASE_SETTINGS,
+        'editor.tabSize': 2,
+        'editor.defaultFormatter': 'esbenp.prettier-vscode',
+        '[typescript][javascript][typescriptreact][javascriptreact]': {
+            'editor.defaultFormatter': 'esbenp.prettier-vscode',
         },
-        extensions: [
-            'GitHub.copilot-chat',
-            'esbenp.prettier-vscode',
-            'dbaeumer.vscode-eslint',
-            'TypeScriptTeam.native-preview',
-        ],
     })
+    ctx.vscode.extensions('node', [
+        ...BASE_EXTENSIONS,
+        'esbenp.prettier-vscode',
+        'dbaeumer.vscode-eslint',
+        'TypeScriptTeam.native-preview',
+    ])
 
-    ctx.vscode.profile('node-modern', {
-        settings: {
-            mode: 'patch',
-            values: {
-                ...BASE_SETTINGS,
-                'editor.tabSize': 2,
-                'editor.defaultFormatter': 'biomejs.biome',
-                '[typescript][javascript][typescriptreact][javascriptreact][json][jsonc]': {
-                    'editor.defaultFormatter': 'biomejs.biome',
-                },
-                'editor.codeActionsOnSave': {
-                    'source.organizeImports.biome': 'explicit',
-                    'source.fixAll.biome': 'explicit',
-                },
-            },
+    ctx.vscode.profile('node-modern')
+    ctx.vscode.settings('node-modern', 'patch', {
+        ...BASE_SETTINGS,
+        'editor.tabSize': 2,
+        'editor.defaultFormatter': 'biomejs.biome',
+        '[typescript][javascript][typescriptreact][javascriptreact][json][jsonc]': {
+            'editor.defaultFormatter': 'biomejs.biome',
         },
-        extensions: ['GitHub.copilot-chat', 'biomejs.biome', 'TypeScriptTeam.native-preview', 'ritwickdey.LiveServer'],
+        'editor.codeActionsOnSave': {
+            'source.organizeImports.biome': 'explicit',
+            'source.fixAll.biome': 'explicit',
+        },
     })
+    ctx.vscode.extensions('node-modern', [
+        ...BASE_EXTENSIONS,
+        'biomejs.biome',
+        'TypeScriptTeam.native-preview',
+        'ritwickdey.LiveServer',
+    ])
 }

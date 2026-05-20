@@ -1,125 +1,59 @@
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
-import { z } from 'zod'
-import type { Step, PlanContext, ApplyContext, PlanResult, StepHooks } from '../types'
-import { StepHooksSchema } from '../types'
-import { run } from '../utils/shell'
-import { jsonPatch, removeKeys } from '../utils/json'
-import { atomicWriteJson } from '../utils/atomic'
-import { shouldSave, noopOrAdopt } from '../utils/plan'
-
-type SettingsMode = 'patch' | 'replace'
-
-export const KeybindingSchema = z.object({
-    key: z.string(),
-    command: z.string(),
-    when: z.string().optional(),
-    args: z.record(z.string(), z.unknown()).optional(),
-})
-
-export const ProfileConfigSchema = z.object({
-    location: z.string().optional(),
-    settings: z
-        .object({
-            mode: z.enum(['patch', 'replace']),
-            values: z.record(z.string(), z.unknown()),
-        })
-        .optional(),
-    extensions: z.array(z.string()).optional(),
-    keybindings: z.array(KeybindingSchema).optional(),
-    tasks: z.record(z.string(), z.unknown()).optional(),
-    mcp: z.record(z.string(), z.unknown()).optional(),
-    languageSnippets: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
-    globalSnippets: z.record(z.string(), z.unknown()).optional(),
-    hooks: StepHooksSchema.optional(),
-})
-
-export type Keybinding = z.infer<typeof KeybindingSchema>
-export type ProfileConfig = z.infer<typeof ProfileConfigSchema>
-
-const VSCODE_USER_DIR = path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User')
-const STORAGE_PATH = path.join(VSCODE_USER_DIR, 'globalStorage', 'storage.json')
-
-function readJsonFile(filePath: string): Record<string, unknown> {
-    try {
-        return JSON.parse(fs.readFileSync(filePath, 'utf8'))
-    } catch {
-        return {}
-    }
-}
-
-function settingsPath(name: string): string {
-    return name === 'default'
-        ? path.join(VSCODE_USER_DIR, 'settings.json')
-        : path.join(VSCODE_USER_DIR, 'profiles', name, 'settings.json')
-}
-
-function keybindingsPath(name: string): string {
-    return name === 'default'
-        ? path.join(VSCODE_USER_DIR, 'keybindings.json')
-        : path.join(VSCODE_USER_DIR, 'profiles', name, 'keybindings.json')
-}
-
-function tasksPath(name: string): string {
-    return name === 'default'
-        ? path.join(VSCODE_USER_DIR, 'tasks.json')
-        : path.join(VSCODE_USER_DIR, 'profiles', name, 'tasks.json')
-}
-
-function mcpPath(name: string): string {
-    return name === 'default'
-        ? path.join(VSCODE_USER_DIR, 'mcp.json')
-        : path.join(VSCODE_USER_DIR, 'profiles', name, 'mcp.json')
-}
-
-function snippetsDir(name: string): string {
-    return name === 'default'
-        ? path.join(VSCODE_USER_DIR, 'snippets')
-        : path.join(VSCODE_USER_DIR, 'profiles', name, 'snippets')
-}
+import type { ApplyContext, PlanContext, PlanResult, Step, StepHooks } from '@/types'
+import { atomicWriteJson } from '@/utils/atomic'
+import { jsonPatch, removeKeys } from '@/utils/json'
+import { noopOrAdopt, shouldSave } from '@/utils/plan'
+import { run } from '@/utils/shell'
+import { STORAGE_PATH } from './constants'
+import { getExtensions } from './extension'
+import type { Keybinding, SettingsMode } from './types'
+import { keybindingsPath, mcpPath, profileArgs, readJsonFile, settingsPath, snippetsDir, tasksPath } from './utils'
 
 export class VscodeProvider {
-    constructor(private readonly push: (step: Step) => void) { }
+    constructor(private readonly push: (step: Step) => void) {}
 
-    profile(name: string, config: ProfileConfig): void {
-        const {
-            location = name,
-            settings,
-            extensions,
-            keybindings,
-            tasks,
-            mcp,
-            languageSnippets,
-            globalSnippets,
-            hooks,
-        } = ProfileConfigSchema.parse(config)
-
+    profile(name: string, config: { location?: string; hooks?: StepHooks } = {}): void {
         if (name !== 'default') {
-            this.push(this.profileStep(name, location, hooks))
+            this.push(this.profileStep(name, config.location ?? name, config.hooks))
         }
-        if (settings) {
-            this.push(this.settingsStep(name, settings.mode, settings.values, hooks))
-        }
+    }
 
-        for (const ext of extensions ?? []) {
-            this.push(this.extensionStep(name, ext))
-        }
+    settings(profileName: string, mode: SettingsMode, values: Record<string, unknown>, hooks?: StepHooks): void {
+        this.push(this.settingsStep(profileName, mode, values, hooks))
+    }
 
-        if (keybindings?.length) {
-            this.push(this.keybindingsStep(name, keybindings, hooks))
+    extensions(profileName: string, extensionIds: string[]): void {
+        for (const extensionId of extensionIds) {
+            this.push(this.extensionStep(profileName, extensionId))
         }
-        if (tasks && Object.keys(tasks).length > 0) {
-            this.push(this.tasksStep(name, tasks, hooks))
+    }
+
+    keybindings(profileName: string, keybindings: Keybinding[], hooks?: StepHooks): void {
+        if (keybindings.length > 0) {
+            this.push(this.keybindingsStep(profileName, keybindings, hooks))
         }
-        if (mcp && Object.keys(mcp).length > 0) {
-            this.push(this.mcpStep(name, mcp, hooks))
+    }
+
+    tasks(profileName: string, tasks: Record<string, unknown>, hooks?: StepHooks): void {
+        if (Object.keys(tasks).length > 0) {
+            this.push(this.tasksStep(profileName, tasks, hooks))
         }
-        for (const [language, snippet] of Object.entries(languageSnippets ?? {})) {
-            this.push(this.languageSnippetStep(name, language, snippet, hooks))
+    }
+
+    mcp(profileName: string, mcp: Record<string, unknown>, hooks?: StepHooks): void {
+        if (Object.keys(mcp).length > 0) {
+            this.push(this.mcpStep(profileName, mcp, hooks))
         }
-        if (globalSnippets && Object.keys(globalSnippets).length > 0) {
-            this.push(this.globalSnippetsStep(name, globalSnippets, hooks))
+    }
+
+    languageSnippet(profileName: string, language: string, snippet: Record<string, unknown>, hooks?: StepHooks): void {
+        this.push(this.languageSnippetStep(profileName, language, snippet, hooks))
+    }
+
+    globalSnippets(profileName: string, snippets: Record<string, unknown>, hooks?: StepHooks): void {
+        if (Object.keys(snippets).length > 0) {
+            this.push(this.globalSnippetsStep(profileName, snippets, hooks))
         }
     }
 
@@ -254,24 +188,6 @@ export class VscodeProvider {
 
     private extensionStep(profileName: string, extensionId: string): Step {
         const id = `vscode.${profileName}.extension.${extensionId}`
-        const profileArgs = profileName === 'default' ? [] : ['--profile', profileName]
-        const extensionsDir = path.join(os.homedir(), '.vscode', 'extensions')
-
-        function isProperlyInstalled(): boolean {
-            const result = Bun.spawnSync(['code', ...profileArgs, '--list-extensions'])
-            if (result.exitCode !== 0) return false
-
-            const listed = new Set(
-                result.stdout
-                    .toString()
-                    .split('\n')
-                    .map((s) => s.trim().toLowerCase())
-                    .filter(Boolean),
-            )
-            if (!listed.has(extensionId.toLowerCase())) return false
-
-            return true
-        }
 
         return {
             id,
@@ -279,14 +195,15 @@ export class VscodeProvider {
             title: `vscode ${profileName} extension ${extensionId}`,
             async plan(ctx: PlanContext): Promise<PlanResult> {
                 const applied = await ctx.getAppliedState(id)
-                if (isProperlyInstalled())
+                if (getExtensions(profileName).has(extensionId.toLowerCase()))
                     return noopOrAdopt(applied, `${extensionId} already installed in ${profileName}`)
                 return { action: 'create', message: `will install ${extensionId} in ${profileName}`, changed: true }
             },
             async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
                 if (plan.action === 'create') {
-                    await run(['code', ...profileArgs, '--install-extension', extensionId])
+                    await run(['code', ...profileArgs(profileName), '--install-extension', extensionId])
                 }
+
                 if (shouldSave(plan.action)) {
                     await ctx.saveAppliedState({ id, kind: 'vscode.extension', details: { extensionId, profileName } })
                 }
