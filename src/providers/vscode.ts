@@ -101,9 +101,11 @@ export class VscodeProvider {
         if (settings) {
             this.push(this.settingsStep(name, settings.mode, settings.values, hooks))
         }
+
         for (const ext of extensions ?? []) {
             this.push(this.extensionStep(name, ext))
         }
+
         if (keybindings?.length) {
             this.push(this.keybindingsStep(name, keybindings, hooks))
         }
@@ -258,6 +260,7 @@ export class VscodeProvider {
         function isProperlyInstalled(): boolean {
             const result = Bun.spawnSync(['code', ...profileArgs, '--list-extensions'])
             if (result.exitCode !== 0) return false
+
             const listed = new Set(
                 result.stdout
                     .toString()
@@ -267,23 +270,7 @@ export class VscodeProvider {
             )
             if (!listed.has(extensionId.toLowerCase())) return false
 
-            // Verify the extension directory actually exists on disk.
-            // All extension files live in extensionsDir regardless of which profile they
-            // belong to — directories are named like `<publisher>.<name>-<version>`.
-            // This avoids parsing extensions.json, whose format differs between the global
-            // registry and per-profile registries.
-            try {
-                const prefix = extensionId.toLowerCase() + '-'
-                return fs
-                    .readdirSync(extensionsDir)
-                    .some(
-                        (dir) =>
-                            dir.toLowerCase().startsWith(prefix) &&
-                            fs.existsSync(path.join(extensionsDir, dir, 'package.json')),
-                    )
-            } catch {
-                return false
-            }
+            return true
         }
 
         return {

@@ -55,7 +55,7 @@ export default (ctx: Context) => {
 
     ctx.vscode.profile('default', {
         settings: {
-            mode: 'replace',
+            mode: 'patch',
             values: {
                 ...BASE_SETTINGS,
                 '[lua]': {
@@ -77,7 +77,7 @@ export default (ctx: Context) => {
 
     ctx.vscode.profile('node', {
         settings: {
-            mode: 'replace',
+            mode: 'patch',
             values: {
                 ...BASE_SETTINGS,
                 'editor.tabSize': 2,
@@ -97,7 +97,7 @@ export default (ctx: Context) => {
 
     ctx.vscode.profile('node-modern', {
         settings: {
-            mode: 'replace',
+            mode: 'patch',
             values: {
                 ...BASE_SETTINGS,
                 'editor.tabSize': 2,
@@ -111,6 +111,6 @@ export default (ctx: Context) => {
                 },
             },
         },
-        extensions: ['GitHub.copilot-chat', 'biomejs.biome', 'TypeScriptTeam.native-preview'],
+        extensions: ['GitHub.copilot-chat', 'biomejs.biome', 'TypeScriptTeam.native-preview', 'ritwickdey.LiveServer'],
     })
 }
