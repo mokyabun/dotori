@@ -1,4 +1,4 @@
-import type { PlanAction, PlanResult, AppliedState } from '../types'
+import type { AppliedState, PlanAction, PlanResult } from '../types'
 
 /**
  * Returns true if the applied state should be persisted after this action.

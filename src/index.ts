@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 import { Command } from 'commander'
-import { loadConfig } from './runner'
-import { runPlan, printPlan } from './commands/plan'
 import { runApply } from './commands/apply'
 import { runClean } from './commands/clean'
+import { printPlan, runPlan } from './commands/plan'
+import { loadConfig } from './runner'
 
 const program = new Command()
 

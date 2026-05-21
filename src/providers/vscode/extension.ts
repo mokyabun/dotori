@@ -1,6 +1,6 @@
-import { profileArgs } from "./utils"
+import { profileArgs } from './utils'
 
-let extensionCache: Map<string, Set<string> | null> = new Map()
+const extensionCache: Map<string, Set<string> | null> = new Map()
 
 export function getExtensions(profileName: string): Set<string> {
     if (extensionCache.has(profileName)) {

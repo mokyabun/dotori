@@ -1,6 +1,6 @@
 import fs from 'node:fs'
-import path from 'node:path'
 import os from 'node:os'
+import path from 'node:path'
 
 export function atomicWriteFile(filePath: string, content: string): void {
     const dir = path.dirname(filePath)

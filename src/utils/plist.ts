@@ -2,8 +2,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import * as plist from 'plist'
-import { expandPath } from './path'
 import { atomicWriteFile } from './atomic'
+import { expandPath } from './path'
 
 /**
  * Resolve a macOS plist domain or path to an absolute file path.

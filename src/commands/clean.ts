@@ -1,12 +1,12 @@
 import fs from 'node:fs'
-import type { Queue } from '../context'
-import type { AppliedState } from '../types'
-import { getAllAppliedStates, deleteAppliedState } from '../db'
-import { cleanBrewFormula, cleanBrewCask, cleanBrewTap } from '../providers/brew'
-import { cleanSymlink, cleanTextBlock } from '../providers/file'
-import { atomicWriteJson } from '../utils/atomic'
-import { resolvePlistPath, readPlist, writePlist } from '../utils/plist'
 import chalk from 'chalk'
+import type { Queue } from '../context'
+import { deleteAppliedState, getAllAppliedStates } from '../db'
+import { cleanBrewCask, cleanBrewFormula, cleanBrewTap } from '../providers/brew'
+import { cleanSymlink, cleanTextBlock } from '../providers/file'
+import type { AppliedState } from '../types'
+import { atomicWriteJson } from '../utils/atomic'
+import { readPlist, resolvePlistPath, writePlist } from '../utils/plist'
 
 export async function runClean(queue: Queue, filterGroupId?: string): Promise<void> {
     const desiredIds = new Set<string>()

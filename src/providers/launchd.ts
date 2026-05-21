@@ -1,10 +1,10 @@
 import fs from 'node:fs'
-import path from 'node:path'
 import os from 'node:os'
-import type { Step, PlanContext, ApplyContext, PlanResult, StepHooks } from '../types'
+import path from 'node:path'
+import type { ApplyContext, PlanContext, PlanResult, Step, StepHooks } from '../types'
 import { atomicWriteFile } from '../utils/atomic'
+import { noopOrAdopt, shouldSave } from '../utils/plan'
 import { run, runSafe } from '../utils/shell'
-import { shouldSave, noopOrAdopt } from '../utils/plan'
 
 type LaunchAgentConfig = Record<string, unknown>
 
@@ -44,7 +44,7 @@ function buildPlistXml(obj: LaunchAgentConfig): string {
 }
 
 export class LaunchdProvider {
-    constructor(private readonly push: (step: Step) => void) { }
+    constructor(private readonly push: (step: Step) => void) {}
 
     agent(label: string, config: LaunchAgentConfig, hooks?: StepHooks): void {
         this.push(this.agentStep(label, config, hooks))
@@ -65,7 +65,7 @@ export class LaunchdProvider {
                 let existing = ''
                 try {
                     existing = fs.readFileSync(plistPath, 'utf8')
-                } catch { }
+                } catch {}
 
                 if (existing === desiredContent) return noopOrAdopt(applied, `launchd agent ${label} already correct`)
                 return existing

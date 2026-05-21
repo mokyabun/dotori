@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { StepHooksSchema } from '@/types';
+import { z } from 'zod'
+import { StepHooksSchema } from '@/types'
 
 export type SettingsMode = 'patch' | 'replace'
 

@@ -1,8 +1,8 @@
-import type { Step, PlanContext, ApplyContext, PlanResult, StepHooks } from '../types'
-import { resolvePlistPath, readPlist, writePlist } from '../utils/plist'
+import type { ApplyContext, PlanContext, PlanResult, Step, StepHooks } from '../types'
 import { deepMerge } from '../utils/json'
+import { noopOrAdopt, shouldSave } from '../utils/plan'
+import { readPlist, resolvePlistPath, writePlist } from '../utils/plist'
 import { run, runSafe } from '../utils/shell'
-import { shouldSave, noopOrAdopt } from '../utils/plan'
 
 type PlistMode = 'patch' | 'replace'
 type DefaultsValue = string | number | boolean
@@ -19,7 +19,7 @@ function defaultsExpectedString(val: DefaultsValue): string {
 }
 
 export class MacosProvider {
-    constructor(private readonly push: (step: Step) => void) { }
+    constructor(private readonly push: (step: Step) => void) {}
 
     defaults(
         id: string,

@@ -1,6 +1,6 @@
-import type { Step, PlanContext, ApplyContext, PlanResult } from '../types'
+import type { ApplyContext, PlanContext, PlanResult, Step } from '../types'
+import { noopOrAdopt, shouldSave } from '../utils/plan'
 import { run } from '../utils/shell'
-import { shouldSave, noopOrAdopt } from '../utils/plan'
 
 const BREW_ENV = {
     HOMEBREW_NO_AUTO_UPDATE: '1',
@@ -14,7 +14,7 @@ export class BrewProvider {
     private static casks: Set<string> | null = null
     private static taps: Set<string> | null = null
 
-    constructor(private readonly push: (step: Step) => void) { }
+    constructor(private readonly push: (step: Step) => void) {}
 
     install(name: string): void {
         this.push(this.formulaStep(name))

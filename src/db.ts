@@ -1,8 +1,8 @@
 import { Database } from 'bun:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
-import { expandPath } from './utils/path'
 import type { AppliedState } from './types'
+import { expandPath } from './utils/path'
 
 // ── Migrations ────────────────────────────────────────────────────────────────
 

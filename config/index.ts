@@ -1,9 +1,9 @@
 import type { Context } from '../src/context'
-import settings from './settings'
 import desktop from './desktop'
 import development from './development'
-import vscode from './vscode'
+import settings from './settings'
 import shell from './shell'
+import vscode from './vscode'
 
 export default (ctx: Context) => {
     ctx.brew.install('git')

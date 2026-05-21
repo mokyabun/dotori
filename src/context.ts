@@ -1,11 +1,11 @@
 import os from 'node:os'
-import type { Step, StepGroup, QueueNode, PlanContext, ApplyContext, StepHooks } from './types'
 import * as db from './db'
 import { BrewProvider } from './providers/brew'
 import { FileProvider } from './providers/file'
-import { VscodeProvider } from './providers/vscode'
-import { MacosProvider } from './providers/macos'
 import { LaunchdProvider } from './providers/launchd'
+import { MacosProvider } from './providers/macos'
+import { VscodeProvider } from './providers/vscode'
+import type { ApplyContext, PlanContext, QueueNode, Step, StepGroup, StepHooks } from './types'
 
 export type Queue = QueueNode[]
 

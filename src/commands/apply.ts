@@ -1,9 +1,9 @@
-import type { Queue } from '../context'
-import type { ApplyContext, PlanContext, PlanResult, Step } from '../types'
-import { makePlanContext, makeApplyContext } from '../context'
-import { runHooks } from '../hooks'
-import { colorAction, printGroupHeader } from '../utils/ui'
 import chalk from 'chalk'
+import type { Queue } from '../context'
+import { makeApplyContext, makePlanContext } from '../context'
+import { runHooks } from '../hooks'
+import type { ApplyContext, PlanContext, PlanResult, Step } from '../types'
+import { colorAction, printGroupHeader } from '../utils/ui'
 
 export async function runApply(queue: Queue, filterGroupId?: string): Promise<void> {
     const planCtx = makePlanContext()

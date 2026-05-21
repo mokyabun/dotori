@@ -1,8 +1,8 @@
-import type { Queue } from '../context'
-import type { PlanContext, PlanResult, Step, StepGroup } from '../types'
-import { makePlanContext } from '../context'
-import { colorAction, printGroupHeader } from '../utils/ui'
 import chalk from 'chalk'
+import type { Queue } from '../context'
+import { makePlanContext } from '../context'
+import type { PlanContext, PlanResult, Step, StepGroup } from '../types'
+import { colorAction, printGroupHeader } from '../utils/ui'
 
 export interface StepPlanResult {
     step: Step

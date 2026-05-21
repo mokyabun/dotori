@@ -1,10 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { Step, PlanContext, ApplyContext, PlanResult, StepHooks } from '../types'
-import { resolvePath } from '../utils/path'
+import type { ApplyContext, PlanContext, PlanResult, Step, StepHooks } from '../types'
 import { atomicWriteFile, atomicWriteJson } from '../utils/atomic'
 import { jsonPatch, removeKeys } from '../utils/json'
-import { shouldSave, noopOrAdopt } from '../utils/plan'
+import { resolvePath } from '../utils/path'
+import { noopOrAdopt, shouldSave } from '../utils/plan'
 
 type JsonMode = 'patch' | 'replace'
 
@@ -19,7 +19,7 @@ export class FileProvider {
     constructor(
         private readonly push: (step: Step) => void,
         private readonly configCwd: string,
-    ) { }
+    ) {}
 
     symlink(linkPath: string, target: string): void {
         this.push(this.symlinkStep(linkPath, target))
@@ -52,7 +52,7 @@ export class FileProvider {
                 try {
                     const stat = fs.lstatSync(resolvedLink)
                     if (stat.isSymbolicLink()) existing = fs.readlinkSync(resolvedLink)
-                } catch { }
+                } catch {}
 
                 if (existing === resolvedTarget) return noopOrAdopt(applied, `symlink ${linkPath} already correct`)
                 if (existing !== null) {
@@ -73,7 +73,7 @@ export class FileProvider {
                     fs.mkdirSync(path.dirname(resolvedLink), { recursive: true })
                     try {
                         fs.unlinkSync(resolvedLink)
-                    } catch { }
+                    } catch {}
                     fs.symlinkSync(resolvedTarget, resolvedLink)
                 }
                 if (shouldSave(plan.action)) {
@@ -124,8 +124,8 @@ export class FileProvider {
                     fileContent = fileContent.includes(start)
                         ? fileContent.replace(blockRegex, desired)
                         : fileContent
-                            ? `${fileContent}\n${desired}\n`
-                            : `${desired}\n`
+                          ? `${fileContent}\n${desired}\n`
+                          : `${desired}\n`
                     atomicWriteFile(resolvedFile, fileContent)
                 }
                 if (shouldSave(plan.action)) {
@@ -237,7 +237,7 @@ export function cleanSymlink(linkPath: string, target: string): void {
         if (stat.isSymbolicLink() && fs.readlinkSync(linkPath) === target) {
             fs.unlinkSync(linkPath)
         }
-    } catch { }
+    } catch {}
 }
 
 export function cleanTextBlock(filePath: string, marker: string): void {
@@ -248,5 +248,5 @@ export function cleanTextBlock(filePath: string, marker: string): void {
         let content = fs.readFileSync(filePath, 'utf8')
         content = content.replace(blockRegex, '\n').replace(/\n{3,}/g, '\n\n')
         atomicWriteFile(filePath, content)
-    } catch { }
+    } catch {}
 }

@@ -34,16 +34,20 @@ export default (ctx: Context) => {
     // bat themes
     const BAT_THEMES_DIR = '~/.config/bat/themes'
     const BAT_THEME_BASE = 'https://github.com/catppuccin/bat/raw/main/themes'
-    ctx.group('bat-themes', (g) => {
-        for (const name of ['Catppuccin Latte', 'Catppuccin Frappe', 'Catppuccin Macchiato', 'Catppuccin Mocha']) {
-            g.file.download(
-                `${BAT_THEMES_DIR}/${name}.tmTheme`,
-                `${BAT_THEME_BASE}/${encodeURIComponent(name)}.tmTheme`,
-            )
-        }
-    }, {
-        hooks: {
-            afterChange: [{ command: ['bat', 'cache', '--build'], description: 'rebuild bat theme cache' }],
+    ctx.group(
+        'bat-themes',
+        (g) => {
+            for (const name of ['Catppuccin Latte', 'Catppuccin Frappe', 'Catppuccin Macchiato', 'Catppuccin Mocha']) {
+                g.file.download(
+                    `${BAT_THEMES_DIR}/${name}.tmTheme`,
+                    `${BAT_THEME_BASE}/${encodeURIComponent(name)}.tmTheme`,
+                )
+            }
         },
-    })
+        {
+            hooks: {
+                afterChange: [{ command: ['bat', 'cache', '--build'], description: 'rebuild bat theme cache' }],
+            },
+        },
+    )
 }
