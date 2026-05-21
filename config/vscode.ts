@@ -5,6 +5,7 @@ const BASE_EXTENSIONS = [
     'Catppuccin.catppuccin-vsc',
     'thang-nm.catppuccin-perfect-icons',
     'EditorConfig.EditorConfig',
+    'openai.chatgpt',
 ]
 
 const BASE_SETTINGS = {
@@ -42,8 +43,7 @@ const BASE_SETTINGS = {
 
     'explorer.fileNesting.enabled': true,
     'explorer.fileNesting.patterns': {
-        'package.json':
-            'package-lock.json, bun.lock, pnpm-lock.yaml, yarn.lock, biome.json, README.md, tsconfig*.json, *.code-workspace, .gitignore, components.json, vite.config.js, vite.config.ts',
+        'package.json': '*',
         '*.ts': '${capture}.test.ts, ${capture}.spec.ts',
         '*.js': '${capture}.test.js, ${capture}.spec.js',
     },
@@ -72,7 +72,7 @@ export default (ctx: Context) => {
         '[nix]': {
             'editor.tabSize': 2,
         },
-        '[json][jsonc]': {
+        '[json, jsonc]': {
             'editor.tabSize': 2,
         },
         '[yaml]': {
@@ -84,36 +84,39 @@ export default (ctx: Context) => {
     ctx.vscode.profile('node')
     ctx.vscode.settings('node', 'patch', {
         ...BASE_SETTINGS,
-        'editor.tabSize': 2,
         'editor.defaultFormatter': 'esbenp.prettier-vscode',
-        '[typescript][javascript][typescriptreact][javascriptreact]': {
+        '[typescript, javascript, typescriptreact, javascriptreact, json, jsonc]': {
             'editor.defaultFormatter': 'esbenp.prettier-vscode',
         },
+        'typescript.experimental.useTsgo': true,
+        'svelte.enable-ts-plugin': true,
     })
     ctx.vscode.extensions('node', [
         ...BASE_EXTENSIONS,
         'esbenp.prettier-vscode',
         'dbaeumer.vscode-eslint',
         'TypeScriptTeam.native-preview',
+        'svelte.svelte-vscode',
     ])
 
     ctx.vscode.profile('node-modern')
     ctx.vscode.settings('node-modern', 'patch', {
         ...BASE_SETTINGS,
-        'editor.tabSize': 2,
         'editor.defaultFormatter': 'biomejs.biome',
-        '[typescript][javascript][typescriptreact][javascriptreact][json][jsonc]': {
+        '[typescript, javascript, typescriptreact, javascriptreact, json, jsonc]': {
             'editor.defaultFormatter': 'biomejs.biome',
         },
         'editor.codeActionsOnSave': {
             'source.organizeImports.biome': 'explicit',
             'source.fixAll.biome': 'explicit',
         },
+        'typescript.experimental.useTsgo': true,
+        'svelte.enable-ts-plugin': true,
     })
     ctx.vscode.extensions('node-modern', [
         ...BASE_EXTENSIONS,
         'biomejs.biome',
         'TypeScriptTeam.native-preview',
-        'ritwickdey.LiveServer',
+        'svelte.svelte-vscode',
     ])
 }
