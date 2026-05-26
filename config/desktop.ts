@@ -1,8 +1,6 @@
 import type { Context } from '../src/context'
 
 export default (ctx: Context) => {
-    ctx.brew.install('macmon')
-
     // Aerospace
     ctx.brew.tap('nikitabobko/tap')
     ctx.brew.cask('aerospace')
@@ -17,6 +15,10 @@ export default (ctx: Context) => {
         RunAtLoad: true,
         KeepAlive: true,
     })
+
+    // Dependencies for Hammerspoon
+    ctx.brew.cask('font-jetbrains-mono-nerd-font')
+    ctx.brew.install('macmon')
 
     // Hammerspoon
     ctx.brew.cask('hammerspoon')

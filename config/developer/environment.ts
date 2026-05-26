@@ -1,4 +1,4 @@
-import type { Context } from '../src/context'
+import type { Context } from '../../src/context'
 
 export default (ctx: Context) => {
     ctx.brew.install('git')
@@ -13,4 +13,9 @@ export default (ctx: Context) => {
 
     // Docker
     ctx.brew.cask('orbstack')
+
+    // Terraform, Ansible
+    ctx.brew.tap('hashicorp/tap')
+    ctx.brew.install('terraform')
+    ctx.brew.install('ansible')
 }

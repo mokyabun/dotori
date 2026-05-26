@@ -8,7 +8,17 @@ import { run } from '@/utils/shell'
 import { STORAGE_PATH } from './constants'
 import { getExtensions } from './extension'
 import type { Keybinding, SettingsMode } from './types'
-import { keybindingsPath, mcpPath, profileArgs, readJsonFile, settingsPath, snippetsDir, tasksPath } from './utils'
+import {
+    keybindingsPath,
+    mcpPath,
+    profileArgs,
+    profileDir,
+    profileGlobalStorageDir,
+    readJsonFile,
+    settingsPath,
+    snippetsDir,
+    tasksPath,
+} from './utils'
 
 export class VscodeProvider {
     constructor(private readonly push: (step: Step) => void) {}
@@ -99,6 +109,10 @@ export class VscodeProvider {
 
     private profileStep(name: string, location: string, hooks?: StepHooks): Step {
         const id = `vscode.profile.${name}`
+        const ensureProfileDirs = () => {
+            fs.mkdirSync(profileDir(location), { recursive: true })
+            fs.mkdirSync(profileGlobalStorageDir(location), { recursive: true })
+        }
         return {
             id,
             kind: 'vscode.profile',
@@ -107,9 +121,18 @@ export class VscodeProvider {
             async plan(ctx: PlanContext): Promise<PlanResult> {
                 const applied = await ctx.getAppliedState(id)
                 const storage = readJsonFile(STORAGE_PATH)
-                const profiles = (storage['userDataProfiles'] as Array<{ name: string; location: string }>) ?? []
+                const profiles = (storage.userDataProfiles as Array<{ name: string; location: string }>) ?? []
                 const existing = profiles.find((p) => p.name === name)
-                if (existing?.location === location) return noopOrAdopt(applied, `profile ${name} already registered`)
+                if (existing?.location === location) {
+                    if (fs.existsSync(profileGlobalStorageDir(location))) {
+                        return noopOrAdopt(applied, `profile ${name} already registered`)
+                    }
+                    return {
+                        action: 'update',
+                        message: `will create vscode profile ${name} global storage`,
+                        changed: true,
+                    }
+                }
                 return {
                     action: existing ? 'update' : 'create',
                     message: `will ${existing ? 'update' : 'create'} profile ${name}`,
@@ -119,12 +142,16 @@ export class VscodeProvider {
             async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
                 if (plan.action === 'create' || plan.action === 'update') {
                     const storage = readJsonFile(STORAGE_PATH)
-                    const profiles = (storage['userDataProfiles'] as Array<{ name: string; location: string }>) ?? []
+                    const profiles = (storage.userDataProfiles as Array<{ name: string; location: string }>) ?? []
                     const idx = profiles.findIndex((p) => p.name === name)
                     const entry = { name, location }
                     if (idx >= 0) profiles[idx] = entry
                     else profiles.push(entry)
                     atomicWriteJson(STORAGE_PATH, { ...storage, userDataProfiles: profiles })
+                    ensureProfileDirs()
+                    await run(['code', ...profileArgs(name), '--list-extensions'])
+                } else if (plan.action === 'noop' || plan.action === 'adopt') {
+                    ensureProfileDirs()
                 }
                 if (shouldSave(plan.action)) {
                     await ctx.saveAppliedState({ id, kind: 'vscode.profile', details: { name, location } })
@@ -167,7 +194,7 @@ export class VscodeProvider {
                     } else {
                         result = jsonPatch(existing, values).result
                         const prevApplied = await ctx.getAppliedState(id)
-                        const prevKeys = prevApplied?.details?.['keys']
+                        const prevKeys = prevApplied?.details?.keys
                         if (Array.isArray(prevKeys)) {
                             const removed = (prevKeys as string[]).filter((k) => !(k in values))
                             result = removeKeys(result, removed)

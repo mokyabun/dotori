@@ -1,12 +1,9 @@
 import type { Context } from '../src/context'
 import desktop from './desktop'
-import development from './development'
+import developer from './developer'
 import settings from './settings'
-import shell from './shell'
-import vscode from './vscode'
 
 export default (ctx: Context) => {
-    ctx.brew.install('git')
     ctx.brew.install('mas')
     ctx.brew.cask('vesktop')
     ctx.brew.cask('parsec')
@@ -14,7 +11,9 @@ export default (ctx: Context) => {
     ctx.brew.cask('linearmouse')
     ctx.brew.cask('jordanbaird-ice')
 
-    ctx.brew.cask('font-jetbrains-mono-nerd-font')
+    developer(ctx)
+
+    ctx.group('desktop', (g) => desktop(g))
 
     ctx.group('settings', (g) => settings(g), {
         hooks: {
@@ -31,8 +30,4 @@ export default (ctx: Context) => {
             ],
         },
     })
-    ctx.group('desktop', (g) => desktop(g))
-    ctx.group('development', (g) => development(g))
-    ctx.group('vscode', (g) => vscode(g))
-    ctx.group('shell', (g) => shell(g))
 }

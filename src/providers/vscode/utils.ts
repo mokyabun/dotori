@@ -1,5 +1,5 @@
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 import { VSCODE_USER_DIR } from './constants'
 
 export function profileArgs(profileName: string): string[] {
@@ -14,32 +14,34 @@ export function readJsonFile(filePath: string): Record<string, unknown> {
     }
 }
 
+export function profileDir(name: string): string {
+    return path.join(VSCODE_USER_DIR, 'profiles', name)
+}
+
+export function profileGlobalStorageDir(name: string): string {
+    return path.join(profileDir(name), 'globalStorage')
+}
+
 export function settingsPath(name: string): string {
     return name === 'default'
         ? path.join(VSCODE_USER_DIR, 'settings.json')
-        : path.join(VSCODE_USER_DIR, 'profiles', name, 'settings.json')
+        : path.join(profileDir(name), 'settings.json')
 }
 
 export function keybindingsPath(name: string): string {
     return name === 'default'
         ? path.join(VSCODE_USER_DIR, 'keybindings.json')
-        : path.join(VSCODE_USER_DIR, 'profiles', name, 'keybindings.json')
+        : path.join(profileDir(name), 'keybindings.json')
 }
 
 export function tasksPath(name: string): string {
-    return name === 'default'
-        ? path.join(VSCODE_USER_DIR, 'tasks.json')
-        : path.join(VSCODE_USER_DIR, 'profiles', name, 'tasks.json')
+    return name === 'default' ? path.join(VSCODE_USER_DIR, 'tasks.json') : path.join(profileDir(name), 'tasks.json')
 }
 
 export function mcpPath(name: string): string {
-    return name === 'default'
-        ? path.join(VSCODE_USER_DIR, 'mcp.json')
-        : path.join(VSCODE_USER_DIR, 'profiles', name, 'mcp.json')
+    return name === 'default' ? path.join(VSCODE_USER_DIR, 'mcp.json') : path.join(profileDir(name), 'mcp.json')
 }
 
 export function snippetsDir(name: string): string {
-    return name === 'default'
-        ? path.join(VSCODE_USER_DIR, 'snippets')
-        : path.join(VSCODE_USER_DIR, 'profiles', name, 'snippets')
+    return name === 'default' ? path.join(VSCODE_USER_DIR, 'snippets') : path.join(profileDir(name), 'snippets')
 }

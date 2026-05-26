@@ -1,4 +1,4 @@
-import type { Context } from '../src/context'
+import type { Context } from '../../src/context'
 
 const BASE_EXTENSIONS = [
     'GitHub.copilot-chat',
@@ -59,6 +59,10 @@ const BASE_SETTINGS = {
 
     'workbench.colorTheme': 'Catppuccin Mocha',
     'workbench.iconTheme': 'Catppuccin Perfect Mocha',
+
+    'workbench.welcomePage.walkthroughs.openOnInstall': false,
+
+    'chatgpt.openOnStartup': false,
 }
 
 export default (ctx: Context) => {

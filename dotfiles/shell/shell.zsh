@@ -19,9 +19,7 @@ bindkey '^[[B' history-substring-search-down
 bindkey '^[OB' history-substring-search-down
 
 # Aliases
-alias cat='bat'
 alias grep='rg'
-alias find='fd'
 alias l='eza -lha --icons --git --group-directories-first'
 
 # Nix
