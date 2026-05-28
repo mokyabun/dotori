@@ -1,6 +1,7 @@
 import { type Context, defineConfig } from 'dotori'
 import desktop from './desktop'
 import developer from './developer'
+import security from './security'
 import settings from './settings'
 
 export default defineConfig((ctx: Context) => {
@@ -30,4 +31,6 @@ export default defineConfig((ctx: Context) => {
             ],
         },
     })
+
+    ctx.group('security', (g) => security(g))
 })
