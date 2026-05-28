@@ -1,14 +1,14 @@
-import chalk from 'chalk'
+import pc from 'picocolors'
 import type { PlanAction } from '../types'
 
 const ACTION_COLORS: Record<PlanAction, (s: string) => string> = {
-    noop: chalk.gray,
-    adopt: chalk.blue,
-    create: chalk.green,
-    update: chalk.yellow,
-    remove: chalk.red,
-    preserve: chalk.magenta,
-    error: (s) => chalk.bgRed.white(s),
+    noop: pc.gray,
+    adopt: pc.blue,
+    create: pc.green,
+    update: pc.yellow,
+    remove: pc.red,
+    preserve: pc.magenta,
+    error: (s) => pc.bgRed(pc.white(s)),
 }
 
 export function colorAction(action: PlanAction): string {
@@ -16,5 +16,5 @@ export function colorAction(action: PlanAction): string {
 }
 
 export function printGroupHeader(id: string): void {
-    console.log(chalk.bold.cyan(`\n[group: ${id}]`))
+    console.log(pc.bold(pc.cyan(`\n[group: ${id}]`)))
 }

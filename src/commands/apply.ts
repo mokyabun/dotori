@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import pc from 'picocolors'
 import type { Queue } from '../context'
 import { makeApplyContext, makePlanContext } from '../context'
 import { runHooks } from '../hooks'
@@ -22,11 +22,11 @@ export async function runApply(queue: Queue, filterGroupId?: string): Promise<vo
                 if (await applyStep(step, planCtx, applyCtx)) anyChanged = true
             }
             if (anyChanged && group.hooks?.afterChange) {
-                console.log(chalk.gray(`  running group afterChange hooks for ${group.id}`))
+                console.log(pc.gray(`  running group afterChange hooks for ${group.id}`))
                 await runHooks(group.hooks.afterChange)
             }
             if (group.hooks?.afterApply) {
-                console.log(chalk.gray(`  running group afterApply hooks for ${group.id}`))
+                console.log(pc.gray(`  running group afterApply hooks for ${group.id}`))
                 await runHooks(group.hooks.afterApply)
             }
         }
@@ -43,7 +43,7 @@ async function applyStep(step: Step, planCtx: PlanContext, applyCtx: ApplyContex
 
     console.log(`  ${colorAction(plan.action)}  ${step.title}`)
     if (plan.action !== 'noop') {
-        console.log(`    ${chalk.gray(plan.message)}`)
+        console.log(`    ${pc.gray(plan.message)}`)
     }
 
     if (plan.action === 'error' || plan.action === 'noop' || plan.action === 'preserve') {
@@ -53,7 +53,7 @@ async function applyStep(step: Step, planCtx: PlanContext, applyCtx: ApplyContex
     try {
         await step.apply(applyCtx, plan)
     } catch (e) {
-        console.error(chalk.red(`    apply failed: ${e}`))
+        console.error(pc.red(`    apply failed: ${e}`))
         return false
     }
 

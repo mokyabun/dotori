@@ -1,8 +1,8 @@
-import type { Context } from '../../src/context'
+import type { Context } from 'dotori'
 
 export default (ctx: Context) => {
     ctx.brew.cask('ghostty')
     ctx.brew.cask('font-jetbrains-mono-nerd-font')
 
-    ctx.file.symlink('~/.config/ghostty', './dotfiles/ghostty')
+    ctx.file.symlink('~/.config/ghostty', '../dotfiles/ghostty')
 }

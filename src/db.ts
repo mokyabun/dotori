@@ -38,17 +38,21 @@ function openDb(): Database {
 
     const db = new Database(path.join(dir, 'state.sqlite'))
 
-    const { user_version: currentVersion } = db.query<{ user_version: number }, []>('PRAGMA user_version').get()!
+    const versionRow = db.query<{ user_version: number }, []>('PRAGMA user_version').get()
+    if (!versionRow) throw new Error('Failed to read database user_version')
+    const { user_version: currentVersion } = versionRow
 
     // Legacy databases created before version tracking had user_version=0
     // but may already have the schema. Stamp them with the latest version
     // to skip migrations that would otherwise fail.
     if (currentVersion === 0) {
-        const { count } = db
+        const tableRow = db
             .query<{ count: number }, []>(
                 "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='applied_state'",
             )
-            .get()!
+            .get()
+        if (!tableRow) throw new Error('Failed to inspect database schema')
+        const { count } = tableRow
         if (count > 0) {
             const latest = migrations.at(-1)?.version ?? 0
             db.run(`PRAGMA user_version = ${latest}`)
@@ -71,7 +75,8 @@ function openDb(): Database {
 let _db: Database | null = null
 
 function getDb(): Database {
-    return (_db ??= openDb())
+    if (!_db) _db = openDb()
+    return _db
 }
 
 // ── Row mapping ───────────────────────────────────────────────────────────────
@@ -128,7 +133,9 @@ export function deleteAppliedState(id: string): void {
 /** Roll back all migrations down to (but not including) targetVersion. */
 export function migrateDown(targetVersion: number): void {
     const db = getDb()
-    const { user_version: current } = db.query<{ user_version: number }, []>('PRAGMA user_version').get()!
+    const versionRow = db.query<{ user_version: number }, []>('PRAGMA user_version').get()
+    if (!versionRow) throw new Error('Failed to read database user_version')
+    const { user_version: current } = versionRow
 
     const toRun = migrations
         .filter((m) => m.version <= current && m.version > targetVersion)

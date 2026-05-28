@@ -1,4 +1,4 @@
-import type { Context } from '../../src/context'
+import type { Context } from 'dotori'
 
 function bat(ctx: Context) {
     ctx.brew.install('bat')
@@ -38,7 +38,7 @@ export default (ctx: Context) => {
     ctx.brew.install('zsh-history-substring-search')
 
     // zshrc: symlink the config file, then source it from ~/.zshrc
-    ctx.file.symlink('~/.config/shell', './dotfiles/shell')
+    ctx.file.symlink('~/.config/shell', '../dotfiles/shell')
     ctx.file.block('~/.zshrc', 'shell', 'source ~/.config/shell/shell.zsh')
 
     ctx.group('development/shell/bat', bat, {

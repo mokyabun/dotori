@@ -1,4 +1,4 @@
-import type { Context } from '../src/context'
+import type { Context } from 'dotori'
 
 export default (ctx: Context) => {
     ctx.macos.plist('dock', 'com.apple.dock', {

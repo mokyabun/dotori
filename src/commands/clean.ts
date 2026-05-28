@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import chalk from 'chalk'
+import pc from 'picocolors'
 import type { Queue } from '../context'
 import { deleteAppliedState, getAllAppliedStates } from '../db'
 import { cleanBrewCask, cleanBrewFormula, cleanBrewTap } from '../providers/brew'
@@ -21,11 +21,11 @@ export async function runClean(queue: Queue, filterGroupId?: string): Promise<vo
     const toClean = getAllAppliedStates().filter((s) => !desiredIds.has(s.id))
 
     if (toClean.length === 0) {
-        console.log(chalk.green('Nothing to clean.'))
+        console.log(pc.green('Nothing to clean.'))
         return
     }
 
-    console.log(chalk.bold(`Cleaning ${toClean.length} item(s)...`))
+    console.log(pc.bold(`Cleaning ${toClean.length} item(s)...`))
     for (const applied of toClean) {
         await cleanItem(applied)
     }
@@ -33,20 +33,20 @@ export async function runClean(queue: Queue, filterGroupId?: string): Promise<vo
 
 async function cleanItem(applied: AppliedState): Promise<void> {
     const d = applied.details ?? {}
-    console.log(`  ${chalk.red('remove')}  ${applied.id}`)
+    console.log(`  ${pc.red('remove')}  ${applied.id}`)
 
     try {
         switch (applied.kind) {
             case 'brew.formula':
-                if (typeof d['name'] === 'string') await cleanBrewFormula(d['name'])
+                if (typeof d.name === 'string') await cleanBrewFormula(d.name)
                 break
 
             case 'brew.cask':
-                if (typeof d['name'] === 'string') await cleanBrewCask(d['name'])
+                if (typeof d.name === 'string') await cleanBrewCask(d.name)
                 break
 
             case 'brew.tap':
-                if (typeof d['repo'] === 'string') await cleanBrewTap(d['repo'])
+                if (typeof d.repo === 'string') await cleanBrewTap(d.repo)
                 break
 
             case 'file.symlink': {
@@ -94,12 +94,12 @@ async function cleanItem(applied: AppliedState): Promise<void> {
                     keys?: unknown
                 }
                 if (Array.isArray(keys) && (domain || plistFilePath)) {
-                    const resolvedPath = plistFilePath ?? resolvePlistPath(domain!)
+                    const resolvedPath = plistFilePath ?? resolvePlistPath(domain as string)
                     const existing = readPlist(resolvedPath)
                     for (const k of keys as string[]) delete existing[k]
                     writePlist(resolvedPath, existing)
                 } else {
-                    console.log(chalk.gray(`    skipping plist clean for ${applied.id} (no domain/keys)`))
+                    console.log(pc.gray(`    skipping plist clean for ${applied.id} (no domain/keys)`))
                 }
                 break
             }
@@ -115,10 +115,10 @@ async function cleanItem(applied: AppliedState): Promise<void> {
             }
 
             default:
-                console.log(chalk.gray(`    unknown kind ${applied.kind}, skipping`))
+                console.log(pc.gray(`    unknown kind ${applied.kind}, skipping`))
         }
     } catch (e) {
-        console.error(chalk.red(`    failed: ${e}`))
+        console.error(pc.red(`    failed: ${e}`))
         return
     }
 

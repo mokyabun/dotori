@@ -1,10 +1,10 @@
-import type { Context } from '../src/context'
+import type { Context } from 'dotori'
 
 export default (ctx: Context) => {
     // Aerospace
     ctx.brew.tap('nikitabobko/tap')
     ctx.brew.cask('aerospace')
-    ctx.file.symlink('~/.config/aerospace', './dotfiles/aerospace')
+    ctx.file.symlink('~/.config/aerospace', '../dotfiles/aerospace')
     ctx.launchd.agent('aerospace', {
         Label: 'com.nikitabobko.aerospace',
         ProgramArguments: [
@@ -22,7 +22,7 @@ export default (ctx: Context) => {
 
     // Hammerspoon
     ctx.brew.cask('hammerspoon')
-    ctx.file.symlink('~/.config/hammerspoon', './dotfiles/hammerspoon')
+    ctx.file.symlink('~/.config/hammerspoon', '../dotfiles/hammerspoon')
     ctx.macos.defaults('hammerspoon', 'org.hammerspoon.Hammerspoon', {
         MJConfigFile: '~/.config/hammerspoon/macbook_init.lua',
     })

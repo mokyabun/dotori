@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { ApplyContext, PlanContext, PlanResult, Step, StepHooks } from '../types'
+import type { ApplyContext, PlanContext, PlanResult, ProviderScope, Step, StepHooks } from '../types'
 import { atomicWriteFile, atomicWriteJson } from '../utils/atomic'
 import { jsonPatch, removeKeys } from '../utils/json'
 import { resolvePath } from '../utils/path'
@@ -16,30 +16,27 @@ const BLOCK_START = (marker: string) => `# BEGIN DOTORI:${marker}`
 const BLOCK_END = (marker: string) => `# END DOTORI:${marker}`
 
 export class FileProvider {
-    constructor(
-        private readonly push: (step: Step) => void,
-        private readonly configCwd: string,
-    ) {}
+    constructor(private readonly scope: ProviderScope) {}
 
     symlink(linkPath: string, target: string): void {
-        this.push(this.symlinkStep(linkPath, target))
+        this.scope.addStep(this.symlinkStep(linkPath, target))
     }
 
     block(filePath: string, marker: string, content: string): void {
-        this.push(this.textBlockStep(filePath, marker, content))
+        this.scope.addStep(this.textBlockStep(filePath, marker, content))
     }
 
     json(filePath: string, options: { mode: JsonMode; values: Record<string, unknown>; hooks?: StepHooks }): void {
-        this.push(this.jsonFileStep(filePath, options.mode, options.values, options.hooks))
+        this.scope.addStep(this.jsonFileStep(filePath, options.mode, options.values, options.hooks))
     }
 
     download(destPath: string, url: string): void {
-        this.push(this.downloadStep(destPath, url))
+        this.scope.addStep(this.downloadStep(destPath, url))
     }
 
     private symlinkStep(linkPath: string, target: string): Step {
-        const resolvedLink = resolvePath(linkPath, this.configCwd)
-        const resolvedTarget = resolvePath(target, this.configCwd)
+        const resolvedLink = resolvePath(linkPath, this.scope.configCwd)
+        const resolvedTarget = resolvePath(target, this.scope.configCwd)
         const id = `file.symlink.${resolvedLink}`
 
         return {
@@ -88,7 +85,7 @@ export class FileProvider {
     }
 
     private textBlockStep(filePath: string, marker: string, content: string): Step {
-        const resolvedFile = resolvePath(filePath, this.configCwd)
+        const resolvedFile = resolvePath(filePath, this.scope.configCwd)
         const id = `file.block.${resolvedFile}.${marker}`
         const start = BLOCK_START(marker)
         const end = BLOCK_END(marker)
@@ -136,7 +133,7 @@ export class FileProvider {
     }
 
     private jsonFileStep(filePath: string, mode: JsonMode, values: Record<string, unknown>, hooks?: StepHooks): Step {
-        const resolvedFile = resolvePath(filePath, this.configCwd)
+        const resolvedFile = resolvePath(filePath, this.scope.configCwd)
         const id = `file.json.${resolvedFile}`
 
         function readExisting(): Record<string, unknown> {
@@ -181,7 +178,7 @@ export class FileProvider {
                     } else {
                         result = jsonPatch(existing, values).result
                         const prevApplied = await ctx.getAppliedState(id)
-                        const prevKeys = prevApplied?.details?.['keys']
+                        const prevKeys = prevApplied?.details?.keys
                         if (Array.isArray(prevKeys)) {
                             const removed = (prevKeys as string[]).filter((k) => !(k in values))
                             result = removeKeys(result, removed)
@@ -200,7 +197,7 @@ export class FileProvider {
         }
     }
     private downloadStep(destPath: string, url: string): Step {
-        const resolvedDest = resolvePath(destPath, this.configCwd)
+        const resolvedDest = resolvePath(destPath, this.scope.configCwd)
         const id = `file.download.${resolvedDest}`
 
         return {

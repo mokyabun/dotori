@@ -1,4 +1,4 @@
-import type { ApplyContext, PlanContext, PlanResult, Step, StepHooks } from '../types'
+import type { ApplyContext, PlanContext, PlanResult, ProviderScope, Step, StepHooks } from '../types'
 import { deepMerge } from '../utils/json'
 import { noopOrAdopt, shouldSave } from '../utils/plan'
 import { readPlist, resolvePlistPath, writePlist } from '../utils/plist'
@@ -19,7 +19,7 @@ function defaultsExpectedString(val: DefaultsValue): string {
 }
 
 export class MacosProvider {
-    constructor(private readonly push: (step: Step) => void) {}
+    constructor(private readonly scope: ProviderScope) {}
 
     defaults(
         id: string,
@@ -27,7 +27,7 @@ export class MacosProvider {
         values: Record<string, DefaultsValue>,
         options?: { afterChange?: StepHooks['afterChange'] },
     ): void {
-        this.push(this.defaultsStep(id, domain, values, { afterChange: options?.afterChange }))
+        this.scope.addStep(this.defaultsStep(id, domain, values, { afterChange: options?.afterChange }))
     }
 
     private defaultsStep(
@@ -45,7 +45,7 @@ export class MacosProvider {
             hooks,
             async plan(ctx: PlanContext): Promise<PlanResult> {
                 const applied = await ctx.getAppliedState(id)
-                const prevKeys = (applied?.details?.['keys'] as string[] | undefined) ?? []
+                const prevKeys = (applied?.details?.keys as string[] | undefined) ?? []
 
                 const changedKeys = Object.entries(values)
                     .filter(([key, val]) => {
@@ -103,7 +103,7 @@ export class MacosProvider {
             afterChange?: StepHooks['afterChange']
         },
     ): void {
-        this.push(
+        this.scope.addStep(
             this.plistStep(id, domainOrPath, options.mode, options.values, {
                 afterChange: options.afterChange,
             }),
@@ -129,7 +129,7 @@ export class MacosProvider {
                 const applied = await ctx.getAppliedState(id)
                 const existing = readPlist(filePath)
 
-                const prevKeys = (applied?.details?.['keys'] as string[] | undefined) ?? []
+                const prevKeys = (applied?.details?.keys as string[] | undefined) ?? []
                 const merged = mode === 'replace' ? values : deepMerge(existing, values)
                 const changedKeys = Object.keys(values).filter(
                     (k) => JSON.stringify(existing[k]) !== JSON.stringify(merged[k]),

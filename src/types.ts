@@ -2,6 +2,8 @@ import { z } from 'zod'
 
 export type PlanAction = 'noop' | 'create' | 'update' | 'remove' | 'adopt' | 'preserve' | 'error'
 
+export type MaybePromise<T> = T | Promise<T>
+
 export interface PlanResult {
     action: PlanAction
     message: string
@@ -30,6 +32,16 @@ export interface Step {
     hooks?: StepHooks
     plan(ctx: PlanContext): Promise<PlanResult>
     apply(ctx: ApplyContext, plan: PlanResult): Promise<void>
+}
+
+export interface DotoriEnv {
+    username: string
+}
+
+export interface ProviderScope {
+    addStep(step: Step): void
+    configCwd: string
+    env: DotoriEnv
 }
 
 export interface StepGroup {

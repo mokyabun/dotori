@@ -1,15 +1,22 @@
 # dotori
 
-To install dependencies:
+Declarative macOS environment manager for Bun.
 
-```bash
-bun install
+## Usage
+
+```ts
+import { defineConfig } from 'dotori'
+
+export default defineConfig((dotori) => {
+    dotori.brew.install('ripgrep')
+    dotori.file.symlink('~/.config/example', './dotfiles/example')
+})
 ```
 
-To run:
-
 ```bash
-bun run index.ts
+bun run dotori plan
+bun run dotori apply
+bun run dotori clean
 ```
 
-This project was created using `bun init` in bun v1.3.13. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+`dotori` is exposed as a library from `src/index.ts`; the CLI lives in `src/cli.ts`.

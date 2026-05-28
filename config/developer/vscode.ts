@@ -1,4 +1,4 @@
-import type { Context } from '../../src/context'
+import type { Context } from 'dotori'
 
 const BASE_EXTENSIONS = [
     'GitHub.copilot-chat',
@@ -7,6 +7,8 @@ const BASE_EXTENSIONS = [
     'EditorConfig.EditorConfig',
     'openai.chatgpt',
 ]
+
+const VSCODE_FILE_NESTING_CAPTURE = ['$', '{capture}'].join('')
 
 const BASE_SETTINGS = {
     'editor.fontSize': 12,
@@ -44,8 +46,8 @@ const BASE_SETTINGS = {
     'explorer.fileNesting.enabled': true,
     'explorer.fileNesting.patterns': {
         'package.json': '*',
-        '*.ts': '${capture}.test.ts, ${capture}.spec.ts',
-        '*.js': '${capture}.test.js, ${capture}.spec.js',
+        '*.ts': `${VSCODE_FILE_NESTING_CAPTURE}.test.ts, ${VSCODE_FILE_NESTING_CAPTURE}.spec.ts`,
+        '*.js': `${VSCODE_FILE_NESTING_CAPTURE}.test.js, ${VSCODE_FILE_NESTING_CAPTURE}.spec.js`,
     },
 
     'git.autofetch': true,
@@ -122,5 +124,20 @@ export default (ctx: Context) => {
         'biomejs.biome',
         'TypeScriptTeam.native-preview',
         'svelte.svelte-vscode',
+    ])
+
+    ctx.vscode.profile('python')
+    ctx.vscode.settings('python', 'patch', {
+        ...BASE_SETTINGS,
+        'editor.defaultFormatter': 'ms-python.black-formatter',
+        '[python]': {
+            'editor.defaultFormatter': 'ms-python.black-formatter',
+        },
+    })
+    ctx.vscode.extensions('python', [
+        ...BASE_EXTENSIONS,
+        'ms-python.python',
+        'ms-python.vscode-pylance',
+        'ms-python.black-formatter',
     ])
 }

@@ -1,4 +1,4 @@
-import type { ApplyContext, PlanContext, PlanResult, Step } from '../types'
+import type { ApplyContext, PlanContext, PlanResult, ProviderScope, Step } from '../types'
 import { noopOrAdopt, shouldSave } from '../utils/plan'
 import { run } from '../utils/shell'
 
@@ -14,18 +14,18 @@ export class BrewProvider {
     private static casks: Set<string> | null = null
     private static taps: Set<string> | null = null
 
-    constructor(private readonly push: (step: Step) => void) {}
+    constructor(private readonly scope: ProviderScope) {}
 
     install(name: string): void {
-        this.push(this.formulaStep(name))
+        this.scope.addStep(this.formulaStep(name))
     }
 
     cask(name: string): void {
-        this.push(this.caskStep(name))
+        this.scope.addStep(this.caskStep(name))
     }
 
     tap(repo: string): void {
-        this.push(this.tapStep(repo))
+        this.scope.addStep(this.tapStep(repo))
     }
 
     private static async getFormulae(): Promise<Set<string>> {

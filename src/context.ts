@@ -1,22 +1,39 @@
 import os from 'node:os'
 import * as db from './db'
-import { BrewProvider } from './providers/brew'
-import { FileProvider } from './providers/file'
-import { LaunchdProvider } from './providers/launchd'
-import { MacosProvider } from './providers/macos'
-import { VscodeProvider } from './providers/vscode'
-import type { ApplyContext, PlanContext, QueueNode, Step, StepGroup, StepHooks } from './types'
+import { createDefaultProviders, type DotoriProviders } from './providers'
+import type {
+    ApplyContext,
+    DotoriEnv,
+    PlanContext,
+    ProviderScope,
+    QueueNode,
+    Step,
+    StepGroup,
+    StepHooks,
+} from './types'
 
 export type Queue = QueueNode[]
 
-export interface Context {
-    brew: BrewProvider
-    file: FileProvider
-    vscode: VscodeProvider
-    macos: MacosProvider
-    launchd: LaunchdProvider
-    env: { username: string }
-    group(id: string, fn: (g: Context) => void, options?: { hooks?: StepHooks }): void
+export type DotoriProviderFactory<TProviders extends Record<string, unknown> = Record<string, unknown>> = (
+    scope: ProviderScope,
+) => TProviders
+
+export interface DotoriOptions {
+    configCwd: string
+    env?: Partial<DotoriEnv>
+    providers?: DotoriProviderFactory[]
+}
+
+export interface DotoriContext extends DotoriProviders {
+    env: DotoriEnv
+    group(id: string, fn: (g: DotoriContext) => void, options?: { hooks?: StepHooks }): void
+}
+
+export type Context = DotoriContext
+
+export interface DotoriRuntime {
+    context: DotoriContext
+    queue: Queue
 }
 
 export function makePlanContext(): PlanContext {
@@ -43,15 +60,25 @@ export function makeApplyContext(): ApplyContext {
     }
 }
 
-export function createContext(queue: Queue, configCwd: string): Context {
-    function buildCtx(push: (step: Step) => void): Context {
+export function createDotori(options: DotoriOptions): DotoriRuntime {
+    const queue: Queue = []
+    const env: DotoriEnv = {
+        username: os.userInfo().username,
+        ...options.env,
+    }
+    const providerFactories = options.providers ?? [createDefaultProviders]
+
+    function buildCtx(addStep: (step: Step) => void): DotoriContext {
+        const scope: ProviderScope = {
+            addStep,
+            configCwd: options.configCwd,
+            env,
+        }
+        const providers = Object.assign({}, ...providerFactories.map((factory) => factory(scope))) as DotoriProviders
+
         return {
-            brew: new BrewProvider(push),
-            file: new FileProvider(push, configCwd),
-            vscode: new VscodeProvider(push),
-            macos: new MacosProvider(push),
-            launchd: new LaunchdProvider(push),
-            env: { username: os.userInfo().username },
+            ...providers,
+            env,
             group(id, fn, options) {
                 const steps: Step[] = []
                 fn(buildCtx((step) => steps.push(step)))
@@ -61,5 +88,8 @@ export function createContext(queue: Queue, configCwd: string): Context {
         }
     }
 
-    return buildCtx((step) => queue.push({ type: 'step', step }))
+    return {
+        context: buildCtx((step) => queue.push({ type: 'step', step })),
+        queue,
+    }
 }

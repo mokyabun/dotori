@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import type { ApplyContext, PlanContext, PlanResult, Step, StepHooks } from '../types'
+import type { ApplyContext, PlanContext, PlanResult, ProviderScope, Step, StepHooks } from '../types'
 import { atomicWriteFile } from '../utils/atomic'
 import { noopOrAdopt, shouldSave } from '../utils/plan'
 import { run, runSafe } from '../utils/shell'
@@ -40,14 +40,14 @@ function buildPlistXml(obj: LaunchAgentConfig): string {
 
     writeValue(obj, '')
     lines.push(`</plist>`)
-    return lines.join('\n') + '\n'
+    return `${lines.join('\n')}\n`
 }
 
 export class LaunchdProvider {
-    constructor(private readonly push: (step: Step) => void) {}
+    constructor(private readonly scope: ProviderScope) {}
 
     agent(label: string, config: LaunchAgentConfig, hooks?: StepHooks): void {
-        this.push(this.agentStep(label, config, hooks))
+        this.scope.addStep(this.agentStep(label, config, hooks))
     }
 
     private agentStep(label: string, config: LaunchAgentConfig, hooks?: StepHooks): Step {

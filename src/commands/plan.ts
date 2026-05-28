@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import pc from 'picocolors'
 import type { Queue } from '../context'
 import { makePlanContext } from '../context'
 import type { PlanContext, PlanResult, Step, StepGroup } from '../types'
@@ -62,5 +62,5 @@ export function printPlan(outputs: PlanOutput[]): void {
 
 function printStepResult(title: string, plan: PlanResult, indent = ''): void {
     console.log(`${indent}${colorAction(plan.action)}  ${title}`)
-    console.log(`${indent}  ${chalk.gray(plan.message)}`)
+    console.log(`${indent}  ${pc.gray(plan.message)}`)
 }

@@ -1,9 +1,9 @@
-import type { Context } from '../src/context'
+import { type Context, defineConfig } from 'dotori'
 import desktop from './desktop'
 import developer from './developer'
 import settings from './settings'
 
-export default (ctx: Context) => {
+export default defineConfig((ctx: Context) => {
     ctx.brew.install('mas')
     ctx.brew.cask('vesktop')
     ctx.brew.cask('parsec')
@@ -30,4 +30,4 @@ export default (ctx: Context) => {
             ],
         },
     })
-}
+})

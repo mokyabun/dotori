@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { ApplyContext, PlanContext, PlanResult, Step, StepHooks } from '@/types'
+import type { ApplyContext, PlanContext, PlanResult, ProviderScope, Step, StepHooks } from '@/types'
 import { atomicWriteJson } from '@/utils/atomic'
 import { jsonPatch, removeKeys } from '@/utils/json'
 import { noopOrAdopt, shouldSave } from '@/utils/plan'
@@ -21,49 +21,49 @@ import {
 } from './utils'
 
 export class VscodeProvider {
-    constructor(private readonly push: (step: Step) => void) {}
+    constructor(private readonly scope: ProviderScope) {}
 
     profile(name: string, config: { location?: string; hooks?: StepHooks } = {}): void {
         if (name !== 'default') {
-            this.push(this.profileStep(name, config.location ?? name, config.hooks))
+            this.scope.addStep(this.profileStep(name, config.location ?? name, config.hooks))
         }
     }
 
     settings(profileName: string, mode: SettingsMode, values: Record<string, unknown>, hooks?: StepHooks): void {
-        this.push(this.settingsStep(profileName, mode, values, hooks))
+        this.scope.addStep(this.settingsStep(profileName, mode, values, hooks))
     }
 
     extensions(profileName: string, extensionIds: string[]): void {
         for (const extensionId of extensionIds) {
-            this.push(this.extensionStep(profileName, extensionId))
+            this.scope.addStep(this.extensionStep(profileName, extensionId))
         }
     }
 
     keybindings(profileName: string, keybindings: Keybinding[], hooks?: StepHooks): void {
         if (keybindings.length > 0) {
-            this.push(this.keybindingsStep(profileName, keybindings, hooks))
+            this.scope.addStep(this.keybindingsStep(profileName, keybindings, hooks))
         }
     }
 
     tasks(profileName: string, tasks: Record<string, unknown>, hooks?: StepHooks): void {
         if (Object.keys(tasks).length > 0) {
-            this.push(this.tasksStep(profileName, tasks, hooks))
+            this.scope.addStep(this.tasksStep(profileName, tasks, hooks))
         }
     }
 
     mcp(profileName: string, mcp: Record<string, unknown>, hooks?: StepHooks): void {
         if (Object.keys(mcp).length > 0) {
-            this.push(this.mcpStep(profileName, mcp, hooks))
+            this.scope.addStep(this.mcpStep(profileName, mcp, hooks))
         }
     }
 
     languageSnippet(profileName: string, language: string, snippet: Record<string, unknown>, hooks?: StepHooks): void {
-        this.push(this.languageSnippetStep(profileName, language, snippet, hooks))
+        this.scope.addStep(this.languageSnippetStep(profileName, language, snippet, hooks))
     }
 
     globalSnippets(profileName: string, snippets: Record<string, unknown>, hooks?: StepHooks): void {
         if (Object.keys(snippets).length > 0) {
-            this.push(this.globalSnippetsStep(profileName, snippets, hooks))
+            this.scope.addStep(this.globalSnippetsStep(profileName, snippets, hooks))
         }
     }
 

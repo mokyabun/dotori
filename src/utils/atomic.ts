@@ -11,5 +11,5 @@ export function atomicWriteFile(filePath: string, content: string): void {
 }
 
 export function atomicWriteJson(filePath: string, data: unknown): void {
-    atomicWriteFile(filePath, JSON.stringify(data, null, 2) + '\n')
+    atomicWriteFile(filePath, `${JSON.stringify(data, null, 2)}\n`)
 }
