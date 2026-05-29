@@ -1,3 +1,4 @@
+import os from 'node:os'
 import type { Context } from 'dotori'
 
 export default (ctx: Context) => {
@@ -23,8 +24,10 @@ export default (ctx: Context) => {
     // Hammerspoon
     ctx.brew.cask('hammerspoon')
     ctx.file.symlink('~/.config/hammerspoon', '../dotfiles/hammerspoon')
+
+    const hostname = process.env.HOSTNAME || os.hostname()
     ctx.macos.defaults('hammerspoon', 'org.hammerspoon.Hammerspoon', {
-        MJConfigFile: '~/.config/hammerspoon/macbook_init.lua',
+        MJConfigFile: `~/.config/hammerspoon/${hostname}_init.lua`,
     })
 
     // Jankeyborder
