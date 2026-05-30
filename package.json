@@ -1,5 +1,6 @@
 {
   "name": "dotori",
+  "description": "A personal Bun-powered declarative setup tool for macOS",
   "module": "src/index.ts",
   "type": "module",
   "exports": {

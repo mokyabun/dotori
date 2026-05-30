@@ -1,6 +1,6 @@
 # dotori
 
-Declarative macOS environment manager written for Bun.
+A personal Bun-powered declarative setup tool for macOS.
 
 ## Installation
 
