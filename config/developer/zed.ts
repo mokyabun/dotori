@@ -15,12 +15,6 @@ const PRETTIER_FORMATTER = {
     },
 }
 
-const BIOME_FORMATTER = {
-    language_server: {
-        name: 'biome',
-    },
-}
-
 const BLACK_FORMATTER = {
     external: {
         command: 'black',
@@ -53,10 +47,9 @@ const PROFILES = {
                 show_type_hints: false,
             },
             languages: languageSettings(BIOME_LANGUAGES, {
-                formatter: BIOME_FORMATTER,
                 code_actions_on_format: {
-                    'source.organizeImports.biome': true,
                     'source.fixAll.biome': true,
+                    'source.organizeImports.biome': true,
                 },
                 format_on_save: 'on',
             }),
@@ -145,6 +138,18 @@ const BASE_SETTINGS = {
     },
 
     profiles: PROFILES,
+
+    lsp: {
+        biome: {
+            binary: {
+                path: '/opt/homebrew/bin/biome',
+                arguments: ['lsp-proxy'],
+            },
+            settings: {
+                require_config_file: true,
+            },
+        },
+    },
 }
 
 export default (ctx: Context) => {
