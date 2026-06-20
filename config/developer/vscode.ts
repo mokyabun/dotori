@@ -1,16 +1,10 @@
 import type { Context } from 'dotori'
 
-const BASE_EXTENSIONS = [
-    'GitHub.copilot-chat',
-    'Catppuccin.catppuccin-vsc',
-    'thang-nm.catppuccin-perfect-icons',
-    'EditorConfig.EditorConfig',
-    'openai.chatgpt',
-]
+const BASE_EXTENSIONS = ['Catppuccin.catppuccin-vsc', 'thang-nm.catppuccin-perfect-icons', 'EditorConfig.EditorConfig']
 
 const VSCODE_FILE_NESTING_CAPTURE = ['$', '{capture}'].join('')
 
-const BASE_SETTINGS = {
+export const BASE_SETTINGS = {
     'editor.fontSize': 12,
     'editor.tabSize': 4,
 
@@ -35,6 +29,7 @@ const BASE_SETTINGS = {
     'files.insertFinalNewline': true,
 
     'terminal.integrated.fontFamily': 'JetBrainsMono Nerd Font',
+    'terminal.integrated.mouseWheelScrollSensitivity': 3,
 
     'workbench.startupEditor': 'none',
     'workbench.editor.enablePreview': false,
@@ -63,8 +58,6 @@ const BASE_SETTINGS = {
     'workbench.iconTheme': 'Catppuccin Perfect Mocha',
 
     'workbench.welcomePage.walkthroughs.openOnInstall': false,
-
-    'chatgpt.openOnStartup': false,
 }
 
 export default (ctx: Context) => {
@@ -86,6 +79,14 @@ export default (ctx: Context) => {
         },
     })
     ctx.vscode.extensions('default', BASE_EXTENSIONS)
+    ctx.vscode.keybindings('default', [
+        {
+            key: 'shift+enter',
+            command: 'workbench.action.terminal.sendSequence',
+            args: { text: '\u001b\r' },
+            when: 'terminalFocus',
+        },
+    ])
 
     ctx.vscode.profile('node')
     ctx.vscode.settings('node', 'patch', {
@@ -101,6 +102,7 @@ export default (ctx: Context) => {
         ...BASE_EXTENSIONS,
         'esbenp.prettier-vscode',
         'dbaeumer.vscode-eslint',
+        'ms-vscode.vscode-typescript-next',
         'TypeScriptTeam.native-preview',
         'svelte.svelte-vscode',
     ])
@@ -116,12 +118,29 @@ export default (ctx: Context) => {
             'source.organizeImports.biome': 'explicit',
             'source.fixAll.biome': 'explicit',
         },
+        'json.schemaDownload.trustedDomains': {
+            'https://schemastore.azurewebsites.net/': true,
+            'https://raw.githubusercontent.com/microsoft/vscode/': true,
+            'https://raw.githubusercontent.com/devcontainers/spec/': true,
+            'https://www.schemastore.org/': true,
+            'https://json.schemastore.org/': true,
+            'https://json-schema.org/': true,
+            'https://developer.microsoft.com/json-schemas/': true,
+            'https://biomejs.dev': true,
+        },
         'typescript.experimental.useTsgo': true,
+        '[typescriptreact]': {
+            'editor.defaultFormatter': 'biomejs.biome',
+        },
+        'biome.configurationPath': '',
         'svelte.enable-ts-plugin': true,
+        'extensions.ignoreRecommendations': true,
     })
     ctx.vscode.extensions('node-modern', [
         ...BASE_EXTENSIONS,
         'biomejs.biome',
+        'bradlc.vscode-tailwindcss',
+        'ritwickdey.liveserver',
         'TypeScriptTeam.native-preview',
         'svelte.svelte-vscode',
     ])
@@ -137,6 +156,8 @@ export default (ctx: Context) => {
     ctx.vscode.extensions('python', [
         ...BASE_EXTENSIONS,
         'ms-python.python',
+        'ms-python.debugpy',
+        'ms-python.vscode-python-envs',
         'ms-python.vscode-pylance',
         'ms-python.black-formatter',
     ])

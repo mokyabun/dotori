@@ -13,6 +13,12 @@ export class BrewProvider {
     private static formulae: Set<string> | null = null
     private static casks: Set<string> | null = null
     private static taps: Set<string> | null = null
+    private static trusted: {
+        taps: Set<string>
+        formulae: Set<string>
+        casks: Set<string>
+        commands: Set<string>
+    } | null = null
 
     constructor(private readonly scope: ProviderScope) {}
 
@@ -26,6 +32,18 @@ export class BrewProvider {
 
     tap(repo: string): void {
         this.scope.addStep(this.tapStep(repo))
+    }
+
+    trustTap(repo: string): void {
+        this.scope.addStep(this.trustStep('tap', repo))
+    }
+
+    trustFormula(name: string): void {
+        this.scope.addStep(this.trustStep('formula', name))
+    }
+
+    trustCask(name: string): void {
+        this.scope.addStep(this.trustStep('cask', name))
     }
 
     private static async getFormulae(): Promise<Set<string>> {
@@ -52,21 +70,48 @@ export class BrewProvider {
         return BrewProvider.taps
     }
 
+    private static async getTrusted(): Promise<{
+        taps: Set<string>
+        formulae: Set<string>
+        casks: Set<string>
+        commands: Set<string>
+    }> {
+        if (!BrewProvider.trusted) {
+            const out = await run(['brew', 'trust', '--json=v1'], BREW_ENV)
+            const json = JSON.parse(out) as {
+                taps?: string[]
+                formulae?: string[]
+                casks?: string[]
+                commands?: string[]
+            }
+            BrewProvider.trusted = {
+                taps: new Set(json.taps ?? []),
+                formulae: new Set(json.formulae ?? []),
+                casks: new Set(json.casks ?? []),
+                commands: new Set(json.commands ?? []),
+            }
+        }
+        return BrewProvider.trusted
+    }
+
     static invalidateCache(): void {
         BrewProvider.formulae = null
         BrewProvider.casks = null
         BrewProvider.taps = null
+        BrewProvider.trusted = null
     }
 
     private formulaStep(name: string): Step {
         const id = `brew.formula.${name}`
+        const installedName = name.split('/').at(-1) ?? name
         return {
             id,
             kind: 'brew.formula',
             title: `brew install ${name}`,
             async plan(ctx: PlanContext): Promise<PlanResult> {
                 const [installed, applied] = await Promise.all([BrewProvider.getFormulae(), ctx.getAppliedState(id)])
-                if (installed.has(name)) return noopOrAdopt(applied, `${name} already installed`)
+                if (installed.has(name) || installed.has(installedName))
+                    return noopOrAdopt(applied, `${name} already installed`)
                 return { action: 'create', message: `will install ${name}`, changed: true }
             },
             async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
@@ -123,6 +168,30 @@ export class BrewProvider {
                 }
                 if (shouldSave(plan.action)) {
                     await ctx.saveAppliedState({ id, kind: 'brew.tap', details: { repo } })
+                }
+            },
+        }
+    }
+
+    private trustStep(kind: 'tap' | 'formula' | 'cask', name: string): Step {
+        const plural = kind === 'tap' ? 'taps' : kind === 'formula' ? 'formulae' : 'casks'
+        const id = `brew.trust.${kind}.${name}`
+        return {
+            id,
+            kind: `brew.trust.${kind}`,
+            title: `brew trust --${kind} ${name}`,
+            async plan(ctx: PlanContext): Promise<PlanResult> {
+                const [trusted, applied] = await Promise.all([BrewProvider.getTrusted(), ctx.getAppliedState(id)])
+                if (trusted[plural].has(name)) return noopOrAdopt(applied, `${name} already trusted`)
+                return { action: 'create', message: `will trust ${kind} ${name}`, changed: true }
+            },
+            async apply(ctx: ApplyContext, plan: PlanResult): Promise<void> {
+                if (plan.action === 'create') {
+                    await run(['brew', 'trust', `--${kind}`, name], BREW_ENV)
+                    BrewProvider.invalidateCache()
+                }
+                if (shouldSave(plan.action)) {
+                    await ctx.saveAppliedState({ id, kind: `brew.trust.${kind}`, details: { name } })
                 }
             },
         }

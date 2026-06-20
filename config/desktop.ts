@@ -4,6 +4,7 @@ import type { Context } from 'dotori'
 export default (ctx: Context) => {
     // Aerospace
     ctx.brew.tap('nikitabobko/tap')
+    ctx.brew.trustCask('nikitabobko/tap/aerospace')
     ctx.brew.cask('aerospace')
     ctx.file.symlink('~/.config/aerospace', '../dotfiles/aerospace')
     ctx.launchd.agent('aerospace', {
@@ -32,6 +33,7 @@ export default (ctx: Context) => {
 
     // Jankeyborder
     ctx.brew.tap('felixkratz/formulae')
+    ctx.brew.trustFormula('felixkratz/formulae/borders')
     ctx.brew.install('borders')
     ctx.launchd.agent('jankeyborder', {
         Label: 'com.nikitabobko.jankeyborder',

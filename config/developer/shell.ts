@@ -17,6 +17,7 @@ function bat(ctx: Context) {
 export default (ctx: Context) => {
     // oh-my-posh
     ctx.brew.tap('jandedobbeleer/oh-my-posh')
+    ctx.brew.trustFormula('jandedobbeleer/oh-my-posh/oh-my-posh')
     ctx.brew.install('oh-my-posh')
 
     // CLI tools
@@ -24,10 +25,11 @@ export default (ctx: Context) => {
     ctx.brew.install('ripgrep')
     ctx.brew.install('jq')
     ctx.brew.install('btop')
-    ctx.brew.install('tldr')
+    ctx.brew.install('tlrc')
     ctx.brew.install('git-delta')
     ctx.brew.install('lazygit')
     ctx.brew.install('yazi')
+    ctx.brew.install('mole')
 
     // Shell enhancements
     ctx.brew.install('eza')

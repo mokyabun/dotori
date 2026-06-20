@@ -18,12 +18,12 @@
     "lint:fix": "biome check --fix"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
+    "@biomejs/biome": "^2.5.0",
     "@types/bun": "latest",
     "@types/plist": "^3.0.5"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "boxen": "^8.0.1",

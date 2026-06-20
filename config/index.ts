@@ -1,19 +1,16 @@
 import { type Context, defineConfig } from 'dotori'
 import desktop from './desktop'
 import developer from './developer'
+import qol from './qol'
 import security from './security'
 import settings from './settings'
 
 export default defineConfig((ctx: Context) => {
     ctx.brew.install('mas')
-    ctx.brew.cask('vesktop')
-    ctx.brew.cask('parsec')
-    ctx.brew.cask('brave-browser')
-    ctx.brew.cask('linearmouse')
-    ctx.brew.cask('jordanbaird-ice')
 
     developer(ctx)
 
+    ctx.group('qol', (g) => qol(g))
     ctx.group('desktop', (g) => desktop(g))
 
     ctx.group('settings', (g) => settings(g), {
