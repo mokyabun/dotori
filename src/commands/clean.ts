@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import pc from 'picocolors'
 import type { Queue } from '../context'
 import { deleteAppliedState, getAllAppliedStates } from '../db'
@@ -106,7 +107,9 @@ async function cleanItem(applied: AppliedState): Promise<void> {
 
             case 'launchd.agent': {
                 const { label, path: plistPath } = d as { label?: string; path?: string }
-                if (label) Bun.spawnSync(['launchctl', 'unload', plistPath ?? ''])
+                const target = `gui/${os.userInfo().uid}`
+                if (plistPath) Bun.spawnSync(['launchctl', 'bootout', target, plistPath])
+                else if (label) Bun.spawnSync(['launchctl', 'bootout', `${target}/${label}`])
                 if (plistPath)
                     try {
                         fs.unlinkSync(plistPath)

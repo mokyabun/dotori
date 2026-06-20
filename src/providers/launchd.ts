@@ -53,7 +53,17 @@ export class LaunchdProvider {
     private agentStep(label: string, config: LaunchAgentConfig, hooks?: StepHooks): Step {
         const id = `launchd.agent.${label}`
         const plistPath = path.join(LAUNCH_AGENTS_DIR, `${label}.plist`)
-        const desiredContent = buildPlistXml({ Label: label, ...config })
+        const desiredContent = buildPlistXml({ ...config, Label: label })
+
+        async function isBootstrapped(): Promise<boolean> {
+            const uid = os.userInfo().uid
+            try {
+                await run(['launchctl', 'print', `gui/${uid}/${label}`])
+                return true
+            } catch {
+                return false
+            }
+        }
 
         return {
             id,
@@ -67,7 +77,10 @@ export class LaunchdProvider {
                     existing = fs.readFileSync(plistPath, 'utf8')
                 } catch {}
 
-                if (existing === desiredContent) return noopOrAdopt(applied, `launchd agent ${label} already correct`)
+                if (existing === desiredContent) {
+                    if (await isBootstrapped()) return noopOrAdopt(applied, `launchd agent ${label} already correct`)
+                    return { action: 'update', message: `will bootstrap launchd agent ${label}`, changed: true }
+                }
                 return existing
                     ? { action: 'update', message: `will update launchd agent ${label}`, changed: true }
                     : { action: 'create', message: `will create launchd agent ${label}`, changed: true }

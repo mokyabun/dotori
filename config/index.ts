@@ -4,6 +4,7 @@ import developer from './developer'
 import qol from './qol'
 import security from './security'
 import settings from './settings'
+import sync from './sync'
 
 export default defineConfig((ctx: Context) => {
     ctx.brew.install('mas')
@@ -11,6 +12,7 @@ export default defineConfig((ctx: Context) => {
     developer(ctx)
 
     ctx.group('qol', (g) => qol(g))
+    ctx.group('sync', (g) => sync(g))
     ctx.group('desktop', (g) => desktop(g))
 
     ctx.group('settings', (g) => settings(g), {
