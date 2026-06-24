@@ -9,7 +9,11 @@ local KEY = "t"
 local appWatcher
 local keepAliveTimer
 local toggleHotkey
+local transitionTimer
+local transitionInFlight = false
+local pendingToggle = false
 local previousWorkspaceByMonitor = {}
+local toggle
 
 local function kittyApp()
 	local apps = hs.application.applicationsForBundleID(BUNDLE_ID)
@@ -79,17 +83,44 @@ local function focusKittyWorkspace()
 	end)
 end
 
-local function toggle()
+local function finishTransition()
+	transitionInFlight = false
+	transitionTimer = nil
+
+	if pendingToggle then
+		pendingToggle = false
+		toggle()
+	end
+end
+
+local function beginTransition(fn)
+	transitionInFlight = true
+	if transitionTimer then
+		transitionTimer:stop()
+	end
+
+	fn()
+	transitionTimer = hs.timer.doAfter(0.45, finishTransition)
+end
+
+toggle = function()
+	if transitionInFlight then
+		pendingToggle = not pendingToggle
+		return
+	end
+
 	local monitorId = focusedMonitorId()
 	local workspace = focusedWorkspace()
 
 	if workspace == KITTY_WORKSPACE then
-		returnToPreviousWorkspace(monitorId)
+		beginTransition(function()
+			returnToPreviousWorkspace(monitorId)
+		end)
 		return
 	end
 
 	previousWorkspaceByMonitor[monitorId] = workspace
-	focusKittyWorkspace()
+	beginTransition(focusKittyWorkspace)
 end
 
 function Terminal.start()
