@@ -41,3 +41,18 @@ export function removeKeys(obj: Record<string, unknown>, keys: string[]): Record
     }
     return result
 }
+
+export function stableJsonStringify(value: unknown): string {
+    return JSON.stringify(normalizeJson(value))
+}
+
+function normalizeJson(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(normalizeJson)
+    if (!isPlainObject(value)) return value
+
+    return Object.fromEntries(
+        Object.entries(value)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([key, val]) => [key, normalizeJson(val)]),
+    )
+}

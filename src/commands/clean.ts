@@ -3,10 +3,13 @@ import os from 'node:os'
 import pc from 'picocolors'
 import type { Queue } from '../context'
 import { deleteAppliedState, getAllAppliedStates } from '../db'
-import { cleanBrewCask, cleanBrewFormula, cleanBrewTap } from '../providers/brew'
+import { cleanBrewCask, cleanBrewFormula, cleanBrewTap, cleanBrewTrust } from '../providers/brew'
 import { cleanSymlink, cleanTextBlock } from '../providers/file'
+import { STORAGE_PATH } from '../providers/vscode/constants'
+import { profileArgs, profileDir } from '../providers/vscode/utils'
 import type { AppliedState } from '../types'
 import { atomicWriteJson } from '../utils/atomic'
+import { removeKeys } from '../utils/json'
 import { readPlist, resolvePlistPath, writePlist } from '../utils/plist'
 
 export async function runClean(queue: Queue, filterGroupId?: string): Promise<void> {
@@ -50,6 +53,15 @@ async function cleanItem(applied: AppliedState): Promise<void> {
                 if (typeof d.repo === 'string') await cleanBrewTap(d.repo)
                 break
 
+            case 'brew.trust.tap':
+            case 'brew.trust.formula':
+            case 'brew.trust.cask': {
+                const { name } = d as { name?: string }
+                const trustKind = applied.kind.replace('brew.trust.', '') as 'tap' | 'formula' | 'cask'
+                if (name) await cleanBrewTrust(trustKind, name)
+                break
+            }
+
             case 'file.symlink': {
                 const { path: linkPath, target } = d as { path?: string; target?: string }
                 if (linkPath && target) cleanSymlink(linkPath, target)
@@ -63,8 +75,14 @@ async function cleanItem(applied: AppliedState): Promise<void> {
             }
 
             case 'file.json': {
-                const { mode, path: filePath } = d as { mode?: string; path?: string }
-                if (mode === 'replace' && filePath) {
+                const { mode, path: filePath, keys } = d as { mode?: string; path?: string; keys?: unknown }
+                if (filePath) cleanJsonFile(filePath, mode, keys)
+                break
+            }
+
+            case 'file.download': {
+                const { path: filePath } = d as { path?: string }
+                if (filePath) {
                     try {
                         fs.unlinkSync(filePath)
                     } catch {}
@@ -73,14 +91,65 @@ async function cleanItem(applied: AppliedState): Promise<void> {
             }
 
             case 'vscode.settings': {
-                const { mode, path: filePath } = d as { mode?: string; path?: string }
-                if (mode === 'replace' && filePath) atomicWriteJson(filePath, {})
+                const { mode, path: filePath, keys } = d as { mode?: string; path?: string; keys?: unknown }
+                if (filePath) cleanJsonFile(filePath, mode, keys)
+                break
+            }
+
+            case 'vscode.keybindings':
+            case 'vscode.tasks':
+            case 'vscode.mcp':
+            case 'vscode.snippet': {
+                const { path: filePath } = d as { path?: string }
+                if (filePath) {
+                    try {
+                        fs.unlinkSync(filePath)
+                    } catch {}
+                }
                 break
             }
 
             case 'vscode.extension': {
-                const { extensionId } = d as { extensionId?: string }
-                if (extensionId) Bun.spawnSync(['code', '--uninstall-extension', extensionId])
+                const { extensionId, profileName } = d as { extensionId?: string; profileName?: string }
+                if (extensionId)
+                    Bun.spawnSync([
+                        'code',
+                        ...profileArgs(profileName ?? 'default'),
+                        '--uninstall-extension',
+                        extensionId,
+                    ])
+                break
+            }
+
+            case 'vscode.profile': {
+                const { name, location } = d as { name?: string; location?: string }
+                if (name) {
+                    const storage = readJson(STORAGE_PATH)
+                    const profiles = Array.isArray(storage.userDataProfiles) ? storage.userDataProfiles : []
+                    atomicWriteJson(STORAGE_PATH, {
+                        ...storage,
+                        userDataProfiles: profiles.filter(
+                            (p) => !(p && typeof p === 'object' && 'name' in p && p.name === name),
+                        ),
+                    })
+                }
+                if (location) {
+                    try {
+                        fs.rmSync(profileDir(location), { recursive: true, force: true })
+                    } catch {}
+                }
+                break
+            }
+
+            case 'macos.defaults': {
+                const { domain, keys } = d as { domain?: string; keys?: unknown }
+                if (domain && Array.isArray(keys)) {
+                    for (const key of keys as string[]) {
+                        Bun.spawnSync(['defaults', 'delete', domain, key])
+                    }
+                } else {
+                    console.log(pc.gray(`    skipping defaults clean for ${applied.id} (no domain/keys)`))
+                }
                 break
             }
 
@@ -126,4 +195,26 @@ async function cleanItem(applied: AppliedState): Promise<void> {
     }
 
     deleteAppliedState(applied.id)
+}
+
+function readJson(filePath: string): Record<string, unknown> {
+    try {
+        return JSON.parse(fs.readFileSync(filePath, 'utf8'))
+    } catch {
+        return {}
+    }
+}
+
+function cleanJsonFile(filePath: string, mode?: string, keys?: unknown): void {
+    if (mode === 'replace') {
+        try {
+            fs.unlinkSync(filePath)
+        } catch {}
+        return
+    }
+
+    if (Array.isArray(keys)) {
+        const existing = readJson(filePath)
+        atomicWriteJson(filePath, removeKeys(existing, keys as string[]))
+    }
 }

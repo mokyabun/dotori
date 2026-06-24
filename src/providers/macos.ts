@@ -1,5 +1,5 @@
 import type { ApplyContext, PlanContext, PlanResult, ProviderScope, Step, StepHooks } from '../types'
-import { deepMerge } from '../utils/json'
+import { deepMerge, stableJsonStringify } from '../utils/json'
 import { noopOrAdopt, shouldSave } from '../utils/plan'
 import { readPlist, resolvePlistPath, writePlist } from '../utils/plist'
 import { run, runSafe } from '../utils/shell'
@@ -132,7 +132,7 @@ export class MacosProvider {
                 const prevKeys = (applied?.details?.keys as string[] | undefined) ?? []
                 const merged = mode === 'replace' ? values : deepMerge(existing, values)
                 const changedKeys = Object.keys(values).filter(
-                    (k) => JSON.stringify(existing[k]) !== JSON.stringify(merged[k]),
+                    (k) => stableJsonStringify(existing[k]) !== stableJsonStringify(merged[k]),
                 )
                 const removedKeys = prevKeys.filter((k) => !(k in values))
                 const allChanged = [...changedKeys, ...removedKeys]

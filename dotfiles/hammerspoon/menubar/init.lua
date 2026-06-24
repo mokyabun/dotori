@@ -9,6 +9,7 @@ local state = {
 	focused = nil,
 	layout = "tiling",
 	power = nil,
+	caffeinate = { display = false, system = false },
 }
 
 local function trim(value)
@@ -68,8 +69,21 @@ local function refreshFocused()
 	state.focused = focused ~= "" and focused or nil
 end
 
+local function refreshCaffeinate()
+	state.caffeinate = {
+		display = hs.caffeinate.get("displayIdle"),
+		system = hs.caffeinate.get("systemIdle"),
+	}
+end
+
+local function refreshView()
+	refreshCaffeinate()
+	view.refresh(state)
+end
+
 refreshWorkspaces()
 refreshFocused()
+refreshCaffeinate()
 
 view.init(state)
 
@@ -81,7 +95,7 @@ local function startClockTimer()
 		clockTimer:stop()
 	end
 	clockTimer = hs.timer.new(60, function()
-		view.refresh(state)
+		refreshView()
 	end)
 	clockTimer:start()
 end
@@ -96,7 +110,7 @@ local function scheduleClock()
 	end
 	local delay = 60 - (os.time() % 60)
 	syncTimer = hs.timer.doAfter(delay, function()
-		view.refresh(state)
+		refreshView()
 		startClockTimer()
 		syncTimer = nil
 	end)
@@ -107,7 +121,7 @@ scheduleClock()
 -- Wake from sleep: refresh immediately and resync clock
 local caffeWatcher = hs.caffeinate.watcher.new(function(event)
 	if event == hs.caffeinate.watcher.systemDidWake or event == hs.caffeinate.watcher.screensDidWake then
-		view.refresh(state)
+		refreshView()
 		scheduleClock()
 	end
 end)
@@ -127,7 +141,7 @@ local function startPowerStream()
 			local ok, data = pcall(hs.json.decode, line)
 			if ok and data and data.sys_power then
 				state.power = string.format("%.1fW", data.sys_power)
-				view.refresh(state)
+				refreshView()
 			end
 		end
 		return true
@@ -141,6 +155,7 @@ startPowerStream()
 local screenWatcher = hs.screen.watcher.new(function()
 	refreshWorkspaces()
 	refreshFocused()
+	refreshCaffeinate()
 	view.init(state)
 end)
 screenWatcher:start()
@@ -150,9 +165,12 @@ socket
 	.on("aerospace", "ws", function(_, workspace)
 		state.focused = workspace
 		refreshWorkspaces()
-		view.refresh(state)
+		refreshView()
 	end)
 	.on("aerospace", "layout", function(_, layout)
 		state.layout = layout
-		view.refresh(state)
+		refreshView()
+	end)
+	.on("system", "caffeinate", function()
+		refreshView()
 	end)

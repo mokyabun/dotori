@@ -20,6 +20,7 @@ return {
 	DATE_SIZE = 11,
 	DAY_SIZE = 10,
 	POWER_SIZE = 10,
+	CAFFEINE_SIZE = 10,
 
 	-- Colors
 	BG = colors.withAlpha(colors.mantle, 0.96),
@@ -28,4 +29,6 @@ return {
 	TEXT = colors.text,
 	MUTED = colors.overlay2,
 	DIM = colors.overlay1,
+	GOOD = colors.green,
+	WARN = colors.yellow,
 }

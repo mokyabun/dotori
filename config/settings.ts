@@ -27,7 +27,35 @@ const finderListViewSettings = {
 
 const finderLegacyListViewSettings = {
     ...finderListViewSettings,
-    columns: Object.fromEntries(finderListColumns.map((column, index) => [column.identifier, { ...column, index }])),
+    columns: Object.fromEntries(
+        finderListColumns
+            .filter((column) => column.identifier !== 'shareOwner' && column.identifier !== 'shareLastEditor')
+            .map(({ identifier, ...column }, index) => [identifier, { ...column, index }]),
+    ),
+}
+
+const finderIconViewSettings = {
+    arrangeBy: 'none',
+    backgroundColorBlue: 1,
+    backgroundColorGreen: 1,
+    backgroundColorRed: 1,
+    backgroundType: 0,
+    gridOffsetX: 0,
+    gridOffsetY: 0,
+    gridSpacing: 54,
+    iconSize: 64,
+    labelOnBottom: true,
+    showIconPreview: true,
+    showItemInfo: false,
+    textSize: 12,
+    viewOptionsVersion: 0,
+}
+
+const finderGalleryViewSettings = {
+    arrangeBy: 'name',
+    iconSize: 48,
+    showIconPreview: true,
+    viewOptionsVersion: 0,
 }
 
 export default (ctx: Context) => {
@@ -49,15 +77,20 @@ export default (ctx: Context) => {
             FXEnableExtensionChangeWarning: false,
             FXPreferredViewStyle: 'Nlsv',
             FK_DefaultListViewSettings: finderListViewSettings,
+            NewWindowTarget: 'PfHm',
             ShowPathbar: true,
+            ShowRecentTags: false,
             ShowStatusBar: true,
             FK_StandardViewSettings: {
                 ExtendedListViewSettingsV2: finderListViewSettings,
+                IconViewSettings: finderIconViewSettings,
                 ListViewSettings: finderLegacyListViewSettings,
                 SettingsType: 'FK_StandardViewSettings',
             },
             StandardViewSettings: {
                 ExtendedListViewSettingsV2: finderListViewSettings,
+                GalleryViewSettings: finderGalleryViewSettings,
+                IconViewSettings: finderIconViewSettings,
                 ListViewSettings: finderLegacyListViewSettings,
                 SettingsType: 'StandardViewSettings',
             },

@@ -218,3 +218,18 @@ export async function cleanBrewTap(repo: string): Promise<void> {
         await run(['brew', 'untap', repo], BREW_ENV)
     }
 }
+
+export async function cleanBrewTrust(kind: 'tap' | 'formula' | 'cask', name: string): Promise<void> {
+    const plural = kind === 'tap' ? 'taps' : kind === 'formula' ? 'formulae' : 'casks'
+    const out = await run(['brew', 'trust', '--json=v1'], BREW_ENV).catch(() => '')
+    if (!out) return
+
+    const json = JSON.parse(out) as {
+        taps?: string[]
+        formulae?: string[]
+        casks?: string[]
+    }
+    if ((json[plural] ?? []).includes(name)) {
+        await run(['brew', 'untrust', `--${kind}`, name], BREW_ENV)
+    }
+}

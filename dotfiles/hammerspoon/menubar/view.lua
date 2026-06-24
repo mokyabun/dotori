@@ -55,7 +55,7 @@ local function drawOn(canvas, h, state, screen)
 		})
 	end
 
-	-- TOP: day / date / time / layout (4 fixed items from top)
+	-- TOP: day / date / time
 	local t = os.time()
 	local day = DAYS[tonumber(os.date("%w", t)) + 1]
 
@@ -63,13 +63,28 @@ local function drawOn(canvas, h, state, screen)
 	textItem(os.date("%m.%d", t), C.DATE_SIZE, C.MUTED, C.PAD + C.MARGIN_Y + C.ITEM_H)
 	textItem(os.date("%H:%M", t), C.TIME_SIZE, C.TEXT, C.PAD + C.MARGIN_Y + 2 * C.ITEM_H)
 
-	local topDiv = C.PAD + 4 * C.ITEM_H + C.SECTION_GAP
+	local topDiv = C.PAD + C.MARGIN_Y + 3 * C.ITEM_H + C.SECTION_GAP
 	divLine(topDiv)
 
-	-- BOTTOM: power (1 fixed item from bottom)
-	local botDiv = h - C.PAD - C.ITEM_H - C.SECTION_GAP - C.DIV_H
+	-- BOTTOM: caffeinate status + power
+	local caffeine = state.caffeinate or {}
+	local caffeineText = "IDLE"
+	local caffeineColor = C.DIM
+	if caffeine.display then
+		caffeineText = "CAF"
+		caffeineColor = C.GOOD
+	elseif caffeine.system then
+		caffeineText = "SYS"
+		caffeineColor = C.WARN
+	end
+
+	local bottomItems = 2
+	local bottomBlockH = bottomItems * C.ITEM_H + (bottomItems - 1) * C.ITEM_GAP
+	local botDiv = h - C.PAD - bottomBlockH - C.SECTION_GAP - C.DIV_H
 	divLine(botDiv)
-	textItem(state.power or "—", C.POWER_SIZE, C.DIM, botDiv + C.DIV_H + C.SECTION_GAP)
+	local bottomY = botDiv + C.DIV_H + C.SECTION_GAP
+	textItem(caffeineText, C.CAFFEINE_SIZE, caffeineColor, bottomY)
+	textItem(state.power or "—", C.POWER_SIZE, C.DIM, bottomY + C.ITEM_H + C.ITEM_GAP)
 
 	-- MIDDLE: workspaces, vertically centered in the remaining space
 	local midStart = topDiv + C.DIV_H + C.SECTION_GAP

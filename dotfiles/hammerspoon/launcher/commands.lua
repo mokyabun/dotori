@@ -1,3 +1,7 @@
+local colors = require("lib.colors")
+local notify = require("lib.notify")
+local socket = require("lib.socket")
+
 local function getCaffeinate(key)
 	return hs.caffeinate.get(key)
 end
@@ -5,6 +9,35 @@ end
 local function setCaffeinate(enabled)
 	hs.caffeinate.set("displayIdle", enabled)
 	hs.caffeinate.set("systemIdle", enabled)
+end
+
+local function publishCaffeinate()
+	socket.send("system", "caffeinate")
+end
+
+local function notifyCaffeinate(mode)
+	if mode == "full" then
+		notify.show({
+			icon = "CA",
+			title = "Caffeinate On",
+			subtitle = "Display and system stay awake",
+			color = colors.green,
+		})
+	elseif mode == "system" then
+		notify.show({
+			icon = "SY",
+			title = "System Caffeinate On",
+			subtitle = "System stays awake, display may sleep",
+			color = colors.yellow,
+		})
+	else
+		notify.show({
+			icon = "ZZ",
+			title = "Caffeinate Off",
+			subtitle = "Normal sleep policy restored",
+			color = colors.overlay1,
+		})
+	end
 end
 
 return {
@@ -62,7 +95,14 @@ return {
 		text = "Reload AeroSpace",
 		subText = "System",
 		fn = function()
-			hs.task.new("/opt/homebrew/bin/aerospace", nil, { "reload-config", "--no-gui" }):start()
+			hs.task.new("/opt/homebrew/bin/aerospace", function()
+				notify.show({
+					icon = "AR",
+					title = "AeroSpace Reloaded",
+					subtitle = "Config reloaded",
+					color = colors.lavender,
+				})
+			end, { "reload-config", "--no-gui" }):start()
 		end,
 	},
 	{
@@ -80,16 +120,26 @@ return {
 			return getCaffeinate("displayIdle") and "Caffeinate: On" or "Caffeinate: Off"
 		end,
 		fn = function()
-			setCaffeinate(not getCaffeinate("displayIdle"))
+			local enabled = not getCaffeinate("displayIdle")
+			setCaffeinate(enabled)
+			publishCaffeinate()
+			notifyCaffeinate(enabled and "full" or "off")
 		end,
 	},
 	{
 		text = "Toggle Caffeinate (System Only)",
 		subText = function()
+			if hs.caffeinate.get("displayIdle") then
+				return "Caffeinate: On"
+			end
 			return hs.caffeinate.get("systemIdle") and "Caffeinate: On (system only)" or "Caffeinate: Off"
 		end,
 		fn = function()
-			hs.caffeinate.set("systemIdle", not hs.caffeinate.get("systemIdle"), true)
+			local enabled = hs.caffeinate.get("displayIdle") or not hs.caffeinate.get("systemIdle")
+			hs.caffeinate.set("displayIdle", false)
+			hs.caffeinate.set("systemIdle", enabled, true)
+			publishCaffeinate()
+			notifyCaffeinate(enabled and "system" or "off")
 		end,
 	},
 
@@ -101,7 +151,14 @@ return {
 			hs.task
 				.new(
 					"/bin/sh",
-					nil,
+					function()
+						notify.show({
+							icon = "RD",
+							title = "RAM Disk Ready",
+							subtitle = "/Volumes/RAMDisk",
+							color = colors.teal,
+						})
+					end,
 					{ "-c", 'diskutil erasevolume HFS+ "RAMDisk" $(hdiutil attach -nomount ram://33554432)' }
 				)
 				:start()
@@ -111,7 +168,14 @@ return {
 		text = "Eject RAM Disk",
 		subText = "Eject /Volumes/RAMDisk",
 		fn = function()
-			hs.task.new("/bin/sh", nil, { "-c", "diskutil eject RAMDisk" }):start()
+			hs.task.new("/bin/sh", function()
+				notify.show({
+					icon = "RD",
+					title = "RAM Disk Ejected",
+					subtitle = "/Volumes/RAMDisk",
+					color = colors.peach,
+				})
+			end, { "-c", "diskutil eject RAMDisk" }):start()
 		end,
 	},
 }
