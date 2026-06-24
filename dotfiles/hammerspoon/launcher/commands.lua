@@ -59,6 +59,13 @@ return {
 		end,
 	},
 	{
+		text = "Reload AeroSpace",
+		subText = "System",
+		fn = function()
+			hs.task.new("/opt/homebrew/bin/aerospace", nil, { "reload-config", "--no-gui" }):start()
+		end,
+	},
+	{
 		text = "Sleep Display",
 		subText = "Sleep display only, system stays awake",
 		fn = function()

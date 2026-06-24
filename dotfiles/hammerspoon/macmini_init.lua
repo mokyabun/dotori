@@ -1,3 +1,4 @@
+require("hs.ipc")
 require("aerospace")
 require("alttab")
 require("launcher")
