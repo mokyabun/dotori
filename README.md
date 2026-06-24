@@ -31,9 +31,9 @@ import { defineConfig, type Context } from 'dotori'
 
 export default defineConfig((ctx: Context) => {
     ctx.brew.install('ripgrep')
-    ctx.brew.cask('ghostty')
+    ctx.brew.cask('kitty')
 
-    ctx.file.symlink('~/.config/ghostty', './dotfiles/ghostty')
+    ctx.file.symlink('~/.config/kitty', './dotfiles/kitty')
 
     ctx.macos.plist('dock', 'com.apple.dock', {
         mode: 'patch',

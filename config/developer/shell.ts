@@ -15,32 +15,24 @@ function bat(ctx: Context) {
 }
 
 export default (ctx: Context) => {
-    // oh-my-posh
-    ctx.brew.tap('jandedobbeleer/oh-my-posh')
-    ctx.brew.trustFormula('jandedobbeleer/oh-my-posh/oh-my-posh')
-    ctx.brew.install('oh-my-posh')
-
     // CLI tools
     ctx.brew.install('fd')
     ctx.brew.install('ripgrep')
     ctx.brew.install('jq')
-    ctx.brew.install('btop')
-    ctx.brew.install('tlrc')
-    ctx.brew.install('git-delta')
-    ctx.brew.install('lazygit')
-    ctx.brew.install('yazi')
     ctx.brew.install('mole')
+    ctx.brew.install('rsync')
 
-    // Shell enhancements
+    // Human-facing shell UX
+    ctx.brew.install('fish')
+    ctx.brew.install('starship')
     ctx.brew.install('eza')
     ctx.brew.install('fzf')
-    ctx.brew.install('zoxide')
-    ctx.brew.install('zsh-autosuggestions')
-    ctx.brew.install('zsh-syntax-highlighting')
-    ctx.brew.install('zsh-history-substring-search')
 
-    // zshrc: symlink the config file, then source it from ~/.zshrc
     ctx.file.symlink('~/.config/shell', '../dotfiles/shell')
+    ctx.file.symlink('~/.config/fish', '../dotfiles/fish')
+    ctx.file.symlink('~/.config/starship.toml', '../dotfiles/shell/starship.toml')
+
+    // Keep zsh as the plain system/default shell. Terminal apps opt into fish.
     ctx.file.block('~/.zshrc', 'shell', 'source ~/.config/shell/shell.zsh')
 
     ctx.group('development/shell/bat', bat, {

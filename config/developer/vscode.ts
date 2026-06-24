@@ -30,6 +30,13 @@ export const BASE_SETTINGS = {
 
     'terminal.integrated.fontFamily': 'JetBrainsMono Nerd Font',
     'terminal.integrated.mouseWheelScrollSensitivity': 3,
+    'terminal.integrated.defaultProfile.osx': 'fish',
+    'terminal.integrated.profiles.osx': {
+        fish: {
+            path: 'fish',
+            args: ['-l'],
+        },
+    },
 
     'workbench.startupEditor': 'none',
     'workbench.editor.enablePreview': false,
@@ -67,9 +74,6 @@ export default (ctx: Context) => {
         ...BASE_SETTINGS,
         '[lua]': {
             'editor.defaultFormatter': 'JohnnyMorganz.stylua',
-        },
-        '[nix]': {
-            'editor.tabSize': 2,
         },
         '[json, jsonc]': {
             'editor.tabSize': 2,
@@ -160,5 +164,10 @@ export default (ctx: Context) => {
         'ms-python.vscode-python-envs',
         'ms-python.vscode-pylance',
         'ms-python.black-formatter',
+        'ms-toolsai.jupyter',
+        'ms-toolsai.jupyter-keymap',
+        'ms-toolsai.jupyter-renderers',
+        'ms-toolsai.vscode-jupyter-cell-tags',
+        'ms-toolsai.vscode-jupyter-slideshow',
     ])
 }
