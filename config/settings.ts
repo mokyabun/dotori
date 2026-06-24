@@ -1,5 +1,35 @@
 import type { Context } from 'dotori'
 
+const finderListColumns = [
+    { identifier: 'name', visible: true, ascending: true, width: 300 },
+    { identifier: 'dateModified', visible: true, ascending: false, width: 181 },
+    { identifier: 'dateCreated', visible: false, ascending: false, width: 181 },
+    { identifier: 'size', visible: true, ascending: false, width: 97 },
+    { identifier: 'kind', visible: true, ascending: true, width: 115 },
+    { identifier: 'label', visible: false, ascending: true, width: 100 },
+    { identifier: 'version', visible: false, ascending: true, width: 75 },
+    { identifier: 'comments', visible: false, ascending: true, width: 300 },
+    { identifier: 'dateLastOpened', visible: false, ascending: false, width: 200 },
+    { identifier: 'shareOwner', visible: false, ascending: false, width: 200 },
+    { identifier: 'shareLastEditor', visible: false, ascending: false, width: 200 },
+]
+
+const finderListViewSettings = {
+    calculateAllSizes: false,
+    columns: finderListColumns,
+    iconSize: 16,
+    showIconPreview: true,
+    sortColumn: 'dateModified',
+    textSize: 13,
+    useRelativeDates: true,
+    viewOptionsVersion: 0,
+}
+
+const finderLegacyListViewSettings = {
+    ...finderListViewSettings,
+    columns: Object.fromEntries(finderListColumns.map((column, index) => [column.identifier, { ...column, index }])),
+}
+
 export default (ctx: Context) => {
     ctx.macos.plist('dock', 'com.apple.dock', {
         mode: 'patch',
@@ -14,8 +44,23 @@ export default (ctx: Context) => {
     ctx.macos.plist('finder', 'com.apple.finder', {
         mode: 'patch',
         values: {
-            ShowPathbar: true,
             AppleShowAllFiles: true,
+            FXDefaultSearchScope: 'SCcf',
+            FXEnableExtensionChangeWarning: false,
+            FXPreferredViewStyle: 'Nlsv',
+            FK_DefaultListViewSettings: finderListViewSettings,
+            ShowPathbar: true,
+            ShowStatusBar: true,
+            FK_StandardViewSettings: {
+                ExtendedListViewSettingsV2: finderListViewSettings,
+                ListViewSettings: finderLegacyListViewSettings,
+                SettingsType: 'FK_StandardViewSettings',
+            },
+            StandardViewSettings: {
+                ExtendedListViewSettingsV2: finderListViewSettings,
+                ListViewSettings: finderLegacyListViewSettings,
+                SettingsType: 'StandardViewSettings',
+            },
         },
         afterChange: [['killall', 'Finder']],
     })
