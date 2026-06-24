@@ -76,6 +76,14 @@ local function show()
 	chooser:show()
 end
 
+local function toggle()
+	if chooser:isVisible() then
+		chooser:hide()
+		return
+	end
+	show()
+end
+
 local database = db.open()
 frecency.init(database)
 
@@ -108,4 +116,4 @@ appWatcher = hs.application.watcher.new(function(_, event, app)
 end)
 appWatcher:start()
 
-hs.hotkey.bind(config.hotkey.mods, config.hotkey.key, show)
+hs.hotkey.bind(config.hotkey.mods, config.hotkey.key, toggle)

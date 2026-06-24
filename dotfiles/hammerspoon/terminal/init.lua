@@ -2,113 +2,94 @@ local Terminal = {}
 
 local BUNDLE_ID = "net.kovidgoyal.kitty"
 local AEROSPACE_BIN = "/opt/homebrew/bin/aerospace"
+local KITTY_WORKSPACE = "T"
 local MODS = { "ctrl", "alt", "cmd" }
 local KEY = "t"
 
 local appWatcher
 local keepAliveTimer
 local toggleHotkey
-local lastWindow
+local previousWorkspaceByMonitor = {}
 
 local function kittyApp()
 	local apps = hs.application.applicationsForBundleID(BUNDLE_ID)
 	return (apps and apps[1]) or hs.application.find("kitty")
 end
 
-local function isKittyWindow(window)
-	local app = window and window:application()
-	return app and app:bundleID() == BUNDLE_ID
+local function trim(value)
+	return (value or ""):match("^%s*(.-)%s*$")
 end
 
-local function rememberFocusedWindow()
-	local window = hs.window.focusedWindow()
-	if window and not isKittyWindow(window) then
-		lastWindow = window
+local function aerospace(command)
+	return trim(hs.execute(AEROSPACE_BIN .. " " .. command, true))
+end
+
+local function focusedWorkspace()
+	return aerospace("list-workspaces --focused --format '%{workspace}'")
+end
+
+local function focusedMonitorId()
+	local monitorId = aerospace("list-monitors --focused --format '%{monitor-id}'")
+	if monitorId ~= "" then
+		return monitorId
 	end
+	return "default"
 end
 
-local function isUsableWindow(window)
-	if not window then
-		return false
+local function moveKittyWindowsToWorkspace()
+	local windows = hs.execute(AEROSPACE_BIN .. " list-windows --all --format '%{window-id}|%{app-bundle-id}'", true)
+	for line in (windows or ""):gmatch("[^\n]+") do
+		local windowId, bundleId = line:match("^(%d+)|(.+)$")
+		if windowId and bundleId == BUNDLE_ID then
+			hs.execute(AEROSPACE_BIN .. " move-node-to-workspace --window-id " .. windowId .. " " .. KITTY_WORKSPACE, true)
+		end
 	end
-	local ok, id = pcall(function()
-		return window:id()
-	end)
-	return ok and id ~= nil
-end
-
-local function currentScreen()
-	local window = hs.window.focusedWindow()
-	return (window and window:screen()) or hs.mouse.getCurrentScreen() or hs.screen.mainScreen()
 end
 
 local function launchInBackground()
 	if kittyApp() then
+		moveKittyWindowsToWorkspace()
 		return
 	end
 	hs.task.new("/usr/bin/open", nil, { "-gj", "-b", BUNDLE_ID }):start()
+	hs.timer.doAfter(0.5, moveKittyWindowsToWorkspace)
 end
 
-local function kittyWindowOnScreen(app, screen)
-	if not app or not screen then
-		return nil
+local function returnToPreviousWorkspace(monitorId)
+	local previous = previousWorkspaceByMonitor[monitorId]
+	if previous and previous ~= "" and previous ~= KITTY_WORKSPACE then
+		aerospace("workspace " .. previous)
+	else
+		aerospace("workspace-back-and-forth")
 	end
-	for _, window in ipairs(app:allWindows()) do
-		if window:screen() and window:screen():id() == screen:id() and not window:isMinimized() then
-			return window
-		end
-	end
-	return nil
 end
 
-local function focusPrevious()
-	if isUsableWindow(lastWindow) and not isKittyWindow(lastWindow) then
-		lastWindow:focus()
-		return
-	end
-	hs.execute(AEROSPACE_BIN .. " focus-back-and-forth", true)
-end
+local function focusKittyWorkspace()
+	launchInBackground()
+	moveKittyWindowsToWorkspace()
+	aerospace("summon-workspace " .. KITTY_WORKSPACE)
+	aerospace("workspace " .. KITTY_WORKSPACE)
 
-local function focusKittyOn(screen)
-	hs.application.launchOrFocusByBundleID(BUNDLE_ID)
-
-	hs.timer.doAfter(0.15, function()
+	hs.timer.doAfter(0.3, function()
+		moveKittyWindowsToWorkspace()
 		local app = kittyApp()
-		if not app then
-			return
+		if app then
+			app:activate(true)
 		end
-
-		app:unhide()
-		local window = kittyWindowOnScreen(app, screen)
-		if window then
-			window:focus()
-			return
-		end
-
-		app:activate(true)
-		hs.timer.doAfter(0.1, function()
-			if not kittyWindowOnScreen(app, screen) then
-				hs.eventtap.keyStroke({ "cmd" }, "n", 0, app)
-			end
-			hs.timer.doAfter(0.2, function()
-				local target = kittyWindowOnScreen(app, screen) or app:focusedWindow() or app:mainWindow()
-				if target then
-					target:focus()
-				end
-			end)
-		end)
 	end)
 end
 
 local function toggle()
-	local focused = hs.window.focusedWindow()
-	if isKittyWindow(focused) then
-		focusPrevious()
+	local monitorId = focusedMonitorId()
+	local workspace = focusedWorkspace()
+
+	if workspace == KITTY_WORKSPACE then
+		returnToPreviousWorkspace(monitorId)
 		return
 	end
 
-	rememberFocusedWindow()
-	focusKittyOn(currentScreen())
+	previousWorkspaceByMonitor[monitorId] = workspace
+	focusKittyWorkspace()
 end
 
 function Terminal.start()
@@ -118,6 +99,8 @@ function Terminal.start()
 	appWatcher = hs.application.watcher.new(function(_, event, app)
 		if app and app:bundleID() == BUNDLE_ID and event == hs.application.watcher.terminated then
 			hs.timer.doAfter(1, launchInBackground)
+		elseif app and app:bundleID() == BUNDLE_ID and event == hs.application.watcher.launched then
+			hs.timer.doAfter(0.5, moveKittyWindowsToWorkspace)
 		end
 	end)
 	appWatcher:start()

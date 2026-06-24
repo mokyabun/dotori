@@ -20,7 +20,12 @@ outer.bottom     = 7
 6 = "secondary"
 
 [[on-window-detected]]
+check-further-callbacks = true
 run = "layout floating"
+
+[[on-window-detected]]
+if.app-id = "net.kovidgoyal.kitty"
+run = ["move-node-to-workspace T", "layout tiling"]
 
 [mode.main.binding]
 ctrl-alt-cmd-left        = "workspace prev"
@@ -42,6 +47,11 @@ ctrl-alt-cmd-j     = "focus left"
 ctrl-alt-cmd-k     = "focus down"
 ctrl-alt-cmd-l     = "focus right"
 ctrl-alt-cmd-i     = "focus up"
+
+ctrl-alt-cmd-shift-j     = "move left"
+ctrl-alt-cmd-shift-k     = "move down"
+ctrl-alt-cmd-shift-l     = "move right"
+ctrl-alt-cmd-shift-i     = "move up"
 
 ctrl-alt-cmd-minus = "resize smart -50"
 ctrl-alt-cmd-equal = "resize smart +50"
