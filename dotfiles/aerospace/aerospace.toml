@@ -33,6 +33,9 @@ ctrl-alt-cmd-down = "focus-monitor next"
 ctrl-alt-cmd-up   = "focus-monitor prev"
 ctrl-alt-cmd-tab  = "focus-monitor --wrap-around next"
 
+ctrl-alt-cmd-shift-down = ["move-node-to-monitor next", "focus-monitor next"]
+ctrl-alt-cmd-shift-up   = ["move-node-to-monitor prev", "focus-monitor prev"]
+
 ctrl-alt-cmd-m = "exec-and-forget sh $HOME/.config/aerospace/toggle-layout.sh"
 
 ctrl-alt-cmd-j     = "focus left"

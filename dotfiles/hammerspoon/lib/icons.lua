@@ -20,7 +20,7 @@ function Icons.load(bundleID)
 	return iconCache[bundleID] or nil
 end
 
-function Icons.prefetch(list, onDone)
+function Icons.prefetch(list, onDone, onProgress)
 	local index = 0
 	local function step()
 		index = index + 1
@@ -32,6 +32,9 @@ function Icons.prefetch(list, onDone)
 		end
 		local bundleID = list[index].bundleID or list[index].bundleId
 		list[index].icon = Icons.load(bundleID)
+		if onProgress then
+			onProgress(list[index])
+		end
 		hs.timer.doAfter(0, step)
 	end
 	hs.timer.doAfter(0, step)

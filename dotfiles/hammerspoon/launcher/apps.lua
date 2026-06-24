@@ -49,9 +49,17 @@ local function rebuild(onDone)
 	Apps.cache = fresh
 
 	if #missing > 0 then
-		icons.prefetch(missing, onDone)
+		icons.prefetch(missing, onDone, onDone)
 	elseif onDone then
 		onDone()
+	end
+end
+
+function Apps.ensureIcons()
+	for _, app in ipairs(Apps.cache) do
+		if not app.icon then
+			app.icon = icons.load(app.bundleId)
+		end
 	end
 end
 

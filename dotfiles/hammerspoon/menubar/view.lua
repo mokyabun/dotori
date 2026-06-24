@@ -15,7 +15,12 @@ local function styled(str, size, color)
 	})
 end
 
-local function drawOn(canvas, h, state)
+local function screenWorkspaces(state, screen)
+	local name = screen:name()
+	return (name and state.workspacesByMonitorName and state.workspacesByMonitorName[name]) or state.workspaces
+end
+
+local function drawOn(canvas, h, state, screen)
 	canvas:replaceElements()
 
 	local w = C.BAR_W
@@ -69,11 +74,12 @@ local function drawOn(canvas, h, state)
 	-- MIDDLE: workspaces, vertically centered in the remaining space
 	local midStart = topDiv + C.DIV_H + C.SECTION_GAP
 	local midEnd = botDiv - C.SECTION_GAP
-	local wsCount = #state.workspaces
+	local workspaces = screenWorkspaces(state, screen)
+	local wsCount = #workspaces
 	local wsBlockH = wsCount * C.ITEM_H + math.max(0, wsCount - 1) * C.ITEM_GAP
 	local wsY = midStart + math.floor((midEnd - midStart - wsBlockH) / 2)
 
-	for i, ws in ipairs(state.workspaces) do
+	for i, ws in ipairs(workspaces) do
 		local active = ws == state.focused
 		if active then
 			canvas:appendElements({
@@ -103,15 +109,15 @@ function View.init(state)
 			h = sf.h,
 		})
 		canvas:level(hs.canvas.windowLevels["mainMenu"])
-		drawOn(canvas, sf.h, state)
+		drawOn(canvas, sf.h, state, screen)
 		canvas:show()
-		entries[screen:id()] = { canvas = canvas, h = sf.h }
+		entries[screen:id()] = { canvas = canvas, h = sf.h, screen = screen }
 	end
 end
 
 function View.refresh(state)
 	for _, e in pairs(entries) do
-		drawOn(e.canvas, e.h, state)
+		drawOn(e.canvas, e.h, state, e.screen)
 	end
 end
 

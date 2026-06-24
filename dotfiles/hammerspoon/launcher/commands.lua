@@ -86,25 +86,16 @@ return {
 		end,
 	},
 
-	-- Network
-	{
-		text = "Connect to SMB",
-		subText = "smb://192.168.10.20",
-		fn = function()
-			hs.execute("open 'smb://192.168.10.20'")
-		end,
-	},
-
 	-- RAM Disk
 	{
 		text = "Make RAM Disk",
-		subText = "Create 4 GB RAM disk at /Volumes/RAMDisk",
+		subText = "Create 16 GB RAM disk at /Volumes/RAMDisk",
 		fn = function()
 			hs.task
 				.new(
 					"/bin/sh",
 					nil,
-					{ "-c", 'diskutil erasevolume HFS+ "RAMDisk" $(hdiutil attach -nomount ram://8388608)' }
+					{ "-c", 'diskutil erasevolume HFS+ "RAMDisk" $(hdiutil attach -nomount ram://33554432)' }
 				)
 				:start()
 		end,

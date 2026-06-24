@@ -71,6 +71,7 @@ local function onChoice(item)
 end
 
 local function show()
+	apps.ensureIcons()
 	chooser:choices(buildChoices())
 	chooser:show()
 end
