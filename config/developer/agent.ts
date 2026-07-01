@@ -13,4 +13,6 @@ export default (ctx: Context) => {
     ctx.brew.install('pandoc')
     ctx.brew.install('exiftool')
     ctx.brew.install('tesseract')
+    ctx.brew.tap('charmbracelet/tap')
+    ctx.brew.install('charmbracelet/tap/freeze')
 }
