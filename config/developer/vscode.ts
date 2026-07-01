@@ -61,8 +61,8 @@ export const BASE_SETTINGS = {
         '**/.git': true,
     },
 
-    'workbench.colorTheme': 'Catppuccin Mocha',
-    'workbench.iconTheme': 'Catppuccin Perfect Mocha',
+    'workbench.colorTheme': 'Catppuccin Latte',
+    'workbench.iconTheme': 'Catppuccin Perfect Latte',
 
     'workbench.welcomePage.walkthroughs.openOnInstall': false,
 }

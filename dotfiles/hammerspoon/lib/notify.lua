@@ -3,12 +3,9 @@ local colors = require("lib.colors")
 local Notify = {}
 
 local FONT = "JetBrainsMono Nerd Font"
-local WIDTH = 318
-local HEIGHT = 76
-local PADDING = 12
-local ICON_SIZE = 34
-local GAP = 10
-local DEFAULT_DURATION = 1.4
+local WIDTH = 260
+local HEIGHT = 50
+local DEFAULT_DURATION = 0.8
 
 local activeCanvas
 local activeTimer
@@ -48,61 +45,34 @@ function Notify.show(options)
 	local accent = options.color or colors.lavender
 	local title = options.title or ""
 	local subtitle = options.subtitle or options.subText or ""
-	local icon = options.icon or "*"
+	local icon = options.icon or ""
 	local duration = options.duration or DEFAULT_DURATION
 	local frame = screenFrame()
-	local x = frame.x + frame.w - WIDTH - 64
-	local y = frame.y + 38
+	local x = frame.x + (frame.w - WIDTH) / 2
+	local y = frame.y + (frame.h - HEIGHT) / 2
+	local text = title
+	if subtitle ~= "" then
+		text = title .. " · " .. subtitle
+	end
+	if icon ~= "" then
+		text = icon .. "  " .. text
+	end
 
 	activeCanvas = hs.canvas.new({ x = x, y = y, w = WIDTH, h = HEIGHT })
 	activeCanvas:level(hs.canvas.windowLevels["mainMenu"])
-	activeCanvas:alpha(0.98)
+	activeCanvas:alpha(0.88)
 	activeCanvas:appendElements({
 		{
 			type = "rectangle",
 			action = "fill",
-			fillColor = colors.withAlpha(colors.crust, 0.94),
-			roundedRectRadii = { xRadius = 9, yRadius = 9 },
+			fillColor = colors.withAlpha(colors.base, 0.84),
+			roundedRectRadii = { xRadius = 8, yRadius = 8 },
 			frame = { x = 0, y = 0, w = WIDTH, h = HEIGHT },
 		},
 		{
-			type = "rectangle",
-			action = "fill",
-			fillColor = colors.withAlpha(accent, 0.18),
-			roundedRectRadii = { xRadius = 7, yRadius = 7 },
-			frame = { x = PADDING, y = PADDING, w = ICON_SIZE, h = ICON_SIZE },
-		},
-		{
 			type = "text",
-			text = styled(icon, 18, accent, "center"),
-			frame = { x = PADDING, y = PADDING + 7, w = ICON_SIZE, h = ICON_SIZE },
-		},
-		{
-			type = "text",
-			text = styled(title, 13, colors.text),
-			frame = {
-				x = PADDING + ICON_SIZE + GAP,
-				y = PADDING + 6,
-				w = WIDTH - PADDING * 2 - ICON_SIZE - GAP,
-				h = 18,
-			},
-		},
-		{
-			type = "text",
-			text = styled(subtitle, 11, colors.overlay2),
-			frame = {
-				x = PADDING + ICON_SIZE + GAP,
-				y = PADDING + 28,
-				w = WIDTH - PADDING * 2 - ICON_SIZE - GAP,
-				h = 18,
-			},
-		},
-		{
-			type = "rectangle",
-			action = "fill",
-			fillColor = accent,
-			roundedRectRadii = { xRadius = 1, yRadius = 1 },
-			frame = { x = PADDING, y = HEIGHT - 13, w = WIDTH - PADDING * 2, h = 2 },
+			text = styled(text, 12, accent, "center"),
+			frame = { x = 12, y = 17, w = WIDTH - 24, h = 16 },
 		},
 	})
 

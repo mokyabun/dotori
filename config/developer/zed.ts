@@ -94,12 +94,8 @@ const BASE_SETTINGS = {
         show: 'never',
     },
 
-    theme: {
-        mode: 'system',
-        light: 'Catppuccin Latte',
-        dark: 'Catppuccin Mocha',
-    },
-    icon_theme: 'Catppuccin Mocha',
+    theme: 'Catppuccin Latte',
+    icon_theme: 'Catppuccin Latte',
     ui_font_size: 16,
 
     tabs: {

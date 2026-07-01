@@ -8,7 +8,8 @@ export default (ctx: Context) => {
         mode: 'patch',
         values: {
             ...BASE_SETTINGS,
-            'workbench.iconTheme': 'vs-seti',
+            'workbench.colorTheme': 'Catppuccin Latte',
+            'workbench.iconTheme': 'Catppuccin Perfect Latte',
             'telemetry.feedback.enabled': false,
             'telemetry.telemetryLevel': 'off',
         },

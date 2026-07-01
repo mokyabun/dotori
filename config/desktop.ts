@@ -44,7 +44,7 @@ export default (ctx: Context) => {
     ctx.launchd.agent('jankeyborder', {
         ProgramArguments: [
             '/opt/homebrew/bin/borders',
-            'active_color=0xffb4befe',
+            'active_color=0xff7287fd',
             'inactive_color=0x00000000',
             'width=7.0',
         ],
