@@ -4,6 +4,10 @@ import type { Context } from 'dotori'
 export default (ctx: Context) => {
     const home = os.homedir()
 
+    ctx.brew.tap('thusvill/livewallpaper')
+    ctx.brew.trustCask('thusvill/livewallpaper/livewallpaper')
+    ctx.brew.cask('livewallpaper')
+
     // Aerospace
     ctx.brew.tap('nikitabobko/tap')
     ctx.brew.trustCask('nikitabobko/tap/aerospace')
