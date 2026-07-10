@@ -59,34 +59,57 @@ const finderGalleryViewSettings = {
 }
 
 export default (ctx: Context) => {
-    ctx.macos.plist('dock', 'com.apple.dock', {
-        mode: 'patch',
-        values: {
-            autohide: true,
-            'show-recents': false,
-            'static-only': true,
-        },
-        afterChange: [['killall', 'Dock']],
-    })
-
     ctx.macos.plist('finder', 'com.apple.finder', {
         mode: 'patch',
         values: {
+            // Finder > Settings > Advanced > Show all filename extensions is complemented by hidden file visibility.
             AppleShowAllFiles: true,
+
+            // Finder > Settings > Advanced > When performing a search > Search the Current Folder
             FXDefaultSearchScope: 'SCcf',
+
+            // Finder > Settings > Advanced > Show warning before changing an extension
             FXEnableExtensionChangeWarning: false,
+
+            // Finder > View > as List
             FXPreferredViewStyle: 'Nlsv',
-            FK_DefaultListViewSettings: finderListViewSettings,
+
+            // Finder > New Finder windows show > Home
             NewWindowTarget: 'PfHm',
+
+            // Finder > View > Show Path Bar
             ShowPathbar: true,
+
+            // Finder > Settings > Sidebar > Recent Tags
             ShowRecentTags: false,
+
+            // Finder > View > Show Status Bar
             ShowStatusBar: true,
+
+            // Finder > Settings > General > Show these items on the desktop > Hard disks
+            ShowHardDrivesOnDesktop: true,
+
+            // Finder > Settings > General > Show these items on the desktop > External disks
+            ShowExternalHardDrivesOnDesktop: true,
+
+            // Finder > Settings > General > Show these items on the desktop > CDs, DVDs, and iPods
+            ShowRemovableMediaOnDesktop: true,
+
+            // Finder > Settings > General > Show these items on the desktop > Connected servers
+            ShowMountedServersOnDesktop: true,
+
+            // Finder list view defaults: visible columns, icon size, sort column, and relative dates.
+            FK_DefaultListViewSettings: finderListViewSettings,
+
+            // Finder standard view defaults used by newer Finder windows.
             FK_StandardViewSettings: {
                 ExtendedListViewSettingsV2: finderListViewSettings,
                 IconViewSettings: finderIconViewSettings,
                 ListViewSettings: finderLegacyListViewSettings,
                 SettingsType: 'FK_StandardViewSettings',
             },
+
+            // Finder standard view defaults used by legacy Finder windows.
             StandardViewSettings: {
                 ExtendedListViewSettingsV2: finderListViewSettings,
                 GalleryViewSettings: finderGalleryViewSettings,
@@ -96,55 +119,5 @@ export default (ctx: Context) => {
             },
         },
         afterChange: [['killall', 'Finder']],
-    })
-
-    ctx.macos.plist('screenshot', 'com.apple.screencapture', {
-        mode: 'patch',
-        values: {
-            'disable-shadow': true,
-        },
-    })
-
-    ctx.macos.plist('trackpad', 'com.apple.AppleMultitouchTrackpad', {
-        mode: 'patch',
-        values: {
-            TrackpadThreeFingerDrag: true,
-        },
-    })
-
-    ctx.macos.plist('window-manager', 'com.apple.WindowManager', {
-        mode: 'patch',
-        values: {
-            EnableStandardClickToShowDesktop: false,
-        },
-        afterChange: [['killall', 'WindowManager']],
-    })
-
-    ctx.macos.plist('hotkey', 'com.apple.symbolichotkeys', {
-        mode: 'patch',
-        values: {
-            AppleSymbolicHotKeys: {
-                // 이전 입력 소스 선택
-                '60': {
-                    enabled: true,
-                    value: {
-                        parameters: [65535, 80, 0],
-                        type: 'standard',
-                    },
-                },
-                // 입력 메뉴에서 다음 소스 선택
-                '61': { enabled: false },
-
-                // Spotlight 검색창 열기
-                '64': {
-                    enabled: false,
-                    value: {
-                        // change to random value to avoid conflict with other shortcuts
-                        parameters: [59, 41, 1179648],
-                        type: 'standard',
-                    },
-                },
-            },
-        },
     })
 }

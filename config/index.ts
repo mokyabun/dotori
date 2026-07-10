@@ -2,10 +2,11 @@ import os from 'node:os'
 import { type Context, defineConfig } from 'dotori'
 import desktop from './desktop'
 import developer from './developer'
+import game from './game'
 import macmini from './macmini'
 import qol from './qol'
 import security from './security'
-import settings from './settings'
+import settings from './settings/index'
 import sync from './sync'
 
 export default defineConfig((ctx: Context) => {
@@ -37,4 +38,6 @@ export default defineConfig((ctx: Context) => {
     })
 
     ctx.group('security', (g) => security(g))
+
+    ctx.group('game', (g) => game(g))
 })

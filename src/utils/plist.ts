@@ -14,6 +14,9 @@ export function resolvePlistPath(domainOrPath: string): string {
     if (domainOrPath.startsWith('/') || domainOrPath.startsWith('~/')) {
         return expandPath(domainOrPath)
     }
+    if (domainOrPath === 'NSGlobalDomain' || domainOrPath === '-g' || domainOrPath === 'Apple Global Domain') {
+        return path.join(os.homedir(), 'Library', 'Preferences', '.GlobalPreferences.plist')
+    }
     return path.join(os.homedir(), 'Library', 'Preferences', `${domainOrPath}.plist`)
 }
 
