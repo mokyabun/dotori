@@ -8,17 +8,19 @@ export default (ctx: Context) => {
     ctx.brew.trustCask('thusvill/livewallpaper/livewallpaper')
     ctx.brew.cask('livewallpaper')
 
-    // Aerospace
-    ctx.brew.tap('nikitabobko/tap')
-    ctx.brew.trustCask('nikitabobko/tap/aerospace')
-    ctx.brew.cask('aerospace')
-    ctx.file.symlink('~/.config/aerospace', '../dotfiles/aerospace')
-    ctx.launchd.agent('aerospace', {
-        ProgramArguments: [
-            '/Applications/Aerospace.app/Contents/MacOS/Aerospace',
-            '--config-path',
-            `${home}/.config/aerospace/aerospace.toml`,
-        ],
+    // yabai + skhd
+    ctx.brew.tap('koekeishiya/formulae')
+    ctx.brew.install('yabai')
+    ctx.brew.install('skhd')
+    ctx.file.symlink('~/.config/yabai', '../dotfiles/yabai')
+    ctx.file.symlink('~/.config/skhd', '../dotfiles/skhd')
+    ctx.launchd.agent('yabai', {
+        ProgramArguments: ['/opt/homebrew/bin/yabai'],
+        RunAtLoad: true,
+        KeepAlive: true,
+    })
+    ctx.launchd.agent('skhd', {
+        ProgramArguments: ['/opt/homebrew/bin/skhd'],
         RunAtLoad: true,
         KeepAlive: true,
     })

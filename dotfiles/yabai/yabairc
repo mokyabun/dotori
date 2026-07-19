@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+# scripting addition (requires SIP disabled)
+sudo yabai --load-sa
+yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
+
+# floating by default (aerospace on-window-detected: layout floating)
+yabai -m config layout float
+
+# gaps (aerospace [gaps])
+yabai -m config top_padding    7
+yabai -m config bottom_padding 7
+yabai -m config left_padding   7
+yabai -m config right_padding  55
+yabai -m config window_gap     7
+yabai -m config window_placement second_child
+
+# notify hammerspoon on space change (aerospace exec-on-workspace-change)
+yabai -m signal --add event=space_changed \
+  action='printf "yabai ws %s" "$(yabai -m query --spaces --space | jq -r .index)" | nc -u -w0 127.0.0.1 9001'

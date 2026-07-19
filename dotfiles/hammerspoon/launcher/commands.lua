@@ -92,17 +92,17 @@ return {
 		end,
 	},
 	{
-		text = "Reload AeroSpace",
+		text = "Reload yabai",
 		subText = "System",
 		fn = function()
-			hs.task.new("/opt/homebrew/bin/aerospace", function()
+			hs.task.new("/opt/homebrew/bin/yabai", function()
 				notify.show({
-					icon = "AR",
-					title = "AeroSpace Reloaded",
+					icon = "YB",
+					title = "yabai Reloaded",
 					subtitle = "Config reloaded",
 					color = colors.lavender,
 				})
-			end, { "reload-config", "--no-gui" }):start()
+			end, { "--restart-service" }):start()
 		end,
 	},
 	{

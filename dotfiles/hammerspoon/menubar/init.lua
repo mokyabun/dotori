@@ -1,7 +1,7 @@
 local socket = require("lib.socket")
 local view = require("menubar.view")
 
-local AEROSPACE_BIN = "/opt/homebrew/bin/aerospace"
+local YABAI_BIN = "/opt/homebrew/bin/yabai"
 
 local state = {
 	workspaces = {},
@@ -12,12 +12,8 @@ local state = {
 	caffeinate = { display = false, system = false },
 }
 
-local function trim(value)
-	return (value or ""):match("^%s*(.-)%s*$")
-end
-
-local function aerospaceJson(command)
-	local output = hs.execute(AEROSPACE_BIN .. " " .. command .. " --json")
+local function yabaiJson(command)
+	local output = hs.execute(YABAI_BIN .. " -m query " .. command)
 	if not output or output == "" then
 		return nil
 	end
@@ -28,45 +24,38 @@ local function aerospaceJson(command)
 	return nil
 end
 
-local function workspaceNames(rows)
-	local names = {}
-	for _, row in ipairs(rows or {}) do
-		local name = row.workspace or row
-		if name then
-			names[#names + 1] = tostring(name)
-		end
-	end
-	return names
-end
-
 local function refreshWorkspaces()
 	state.workspaces = {}
 	state.workspacesByMonitorName = {}
 
-	local monitors = aerospaceJson("list-monitors")
-	if monitors and #monitors > 0 then
-		for _, monitor in ipairs(monitors) do
-			local monitorId = monitor["monitor-id"]
-			local monitorName = monitor["monitor-name"]
-			local workspaces = workspaceNames(aerospaceJson("list-workspaces --monitor " .. monitorId))
-
-			if monitorName and #workspaces > 0 then
-				state.workspacesByMonitorName[monitorName] = workspaces
+	local displays = yabaiJson("--displays")
+	if displays and #displays > 0 then
+		for _, display in ipairs(displays) do
+			local monitorName = tostring(display.index)
+			local names = {}
+			for _, space in ipairs(display.spaces or {}) do
+				names[#names + 1] = tostring(space)
 			end
-			for _, workspace in ipairs(workspaces) do
-				state.workspaces[#state.workspaces + 1] = workspace
+
+			if #names > 0 then
+				state.workspacesByMonitorName[monitorName] = names
+			end
+			for _, name in ipairs(names) do
+				state.workspaces[#state.workspaces + 1] = name
 			end
 		end
 	end
 
 	if #state.workspaces == 0 then
-		state.workspaces = workspaceNames(aerospaceJson("list-workspaces --all"))
+		for _, space in ipairs(yabaiJson("--spaces") or {}) do
+			state.workspaces[#state.workspaces + 1] = tostring(space.index)
+		end
 	end
 end
 
 local function refreshFocused()
-	local focused = trim(hs.execute(AEROSPACE_BIN .. " list-workspaces --focused"))
-	state.focused = focused ~= "" and focused or nil
+	local focused = yabaiJson("--spaces --space")
+	state.focused = focused and tostring(focused.index) or nil
 end
 
 local function refreshCaffeinate()
@@ -160,14 +149,14 @@ local screenWatcher = hs.screen.watcher.new(function()
 end)
 screenWatcher:start()
 
--- Aerospace events
+-- yabai events
 socket
-	.on("aerospace", "ws", function(_, workspace)
+	.on("yabai", "ws", function(_, workspace)
 		state.focused = workspace
 		refreshWorkspaces()
 		refreshView()
 	end)
-	.on("aerospace", "layout", function(_, layout)
+	.on("yabai", "layout", function(_, layout)
 		state.layout = layout
 		refreshView()
 	end)

@@ -1,5 +1,5 @@
 require("hs.ipc")
-require("aerospace")
+require("yabai")
 require("alttab")
 require("launcher")
 require("clipboard")

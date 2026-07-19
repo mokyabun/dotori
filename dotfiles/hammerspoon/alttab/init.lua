@@ -1,7 +1,7 @@
 local colors = require("lib.colors")
 local icons = require("lib.icons")
 
-local AEROSPACE_BIN = "/opt/homebrew/bin/aerospace"
+local YABAI_BIN = "/opt/homebrew/bin/yabai"
 
 local PANEL_W = 340
 local ITEM_H = 54
@@ -22,18 +22,21 @@ local isActive = false
 local switcherCanvas = nil
 
 local function queryWindows(includeAllWorkspaces)
-	local flag = includeAllWorkspaces and "--all" or "--workspace focused"
-	local output =
-		hs.execute(AEROSPACE_BIN .. " list-windows " .. flag .. " --format '%{window-id}|%{app-name}|%{window-title}'")
+	local flag = includeAllWorkspaces and "" or " --space"
+	local output = hs.execute(YABAI_BIN .. " -m query --windows" .. flag)
 	local windows = {}
-	for line in output:gmatch("[^\n]+") do
-		local windowId, appName, title = line:match("([^|]+)|([^|]+)|([^|]+)")
-		if windowId then
+	local ok, rows = pcall(hs.json.decode, output)
+	if not ok or type(rows) ~= "table" then
+		return windows
+	end
+	for _, row in ipairs(rows) do
+		local appName = row.app
+		if appName then
 			local bundleID = icons.bundleID(appName)
 			windows[#windows + 1] = {
-				windowId = windowId:gsub("%s+", ""),
+				windowId = tostring(row.id),
 				app = appName,
-				title = title or "",
+				title = row.title or "",
 				icon = icons.load(bundleID),
 			}
 		end
@@ -185,7 +188,7 @@ end
 
 local function confirmSelection()
 	if isActive and #windowList > 0 then
-		hs.execute(AEROSPACE_BIN .. " focus --window-id " .. windowList[selectedIndex].windowId)
+		hs.execute(YABAI_BIN .. " -m window --focus " .. windowList[selectedIndex].windowId)
 	end
 	destroySwitcher()
 end
