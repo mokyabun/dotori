@@ -10,8 +10,8 @@ export default (ctx: Context) => {
 
     // yabai + skhd
     ctx.brew.tap('koekeishiya/formulae')
-    ctx.brew.install('yabai')
-    ctx.brew.install('skhd')
+    ctx.brew.install('koekeishiya/formulae/yabai')
+    ctx.brew.install('koekeishiya/formulae/skhd')
     ctx.file.symlink('~/.config/yabai', '../dotfiles/yabai')
     ctx.file.symlink('~/.config/skhd', '../dotfiles/skhd')
     ctx.launchd.agent('yabai', {
