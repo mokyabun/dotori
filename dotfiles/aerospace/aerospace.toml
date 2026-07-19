@@ -23,10 +23,6 @@ outer.bottom     = 7
 check-further-callbacks = true
 run = "layout floating"
 
-[[on-window-detected]]
-if.app-id = "net.kovidgoyal.kitty"
-run = ["move-node-to-workspace T", "layout tiling"]
-
 [mode.main.binding]
 ctrl-alt-cmd-left        = "workspace prev"
 ctrl-alt-cmd-right       = "workspace next"
