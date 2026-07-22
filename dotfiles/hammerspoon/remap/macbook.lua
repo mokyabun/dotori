@@ -28,5 +28,8 @@ local function mehKeyHandler(event)
 	return false
 end
 
-keyHandler =
-	hs.eventtap.new({ hs.eventtap.event.types.keyDown, hs.eventtap.event.types.keyUp }, mehKeyHandler):start()
+local keyHandler = hs.eventtap
+	.new({ hs.eventtap.event.types.keyDown, hs.eventtap.event.types.keyUp }, mehKeyHandler)
+	:start()
+
+return { keyHandler = keyHandler }

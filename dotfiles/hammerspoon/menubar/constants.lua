@@ -1,4 +1,5 @@
 local colors = require("lib.colors")
+local palette = colors.mocha
 
 return {
 	-- Layout
@@ -23,12 +24,12 @@ return {
 	CAFFEINE_SIZE = 10,
 
 	-- Colors
-	BG = colors.withAlpha(colors.mantle, 0.96),
-	ACTIVE_BG = colors.surface1,
-	DIV = colors.withAlpha(colors.surface0, 0.6),
-	TEXT = colors.text,
-	MUTED = colors.overlay2,
-	DIM = colors.overlay1,
-	GOOD = colors.green,
-	WARN = colors.yellow,
+	BG = colors.withAlpha(palette.mantle, 0.96),
+	ACTIVE_BG = palette.surface1,
+	DIV = colors.withAlpha(palette.surface0, 0.6),
+	TEXT = palette.text,
+	MUTED = palette.overlay2,
+	DIM = palette.overlay1,
+	GOOD = palette.green,
+	WARN = palette.yellow,
 }

@@ -1,7 +1,12 @@
 local Icons = {}
 
-local iconCache = {} -- bundleID → hs.image | false
+local iconCache = {} -- bundleID → hs.image
 local bundleIDCache = {} -- appName  → bundleID | false
+local prefetchGeneration = 0
+local prefetchTimer
+
+local PREFETCH_BATCH_SIZE = 8
+local PREFETCH_DELAY = 0.01
 
 function Icons.get(bundleID)
 	if not bundleID then
@@ -15,29 +20,52 @@ function Icons.load(bundleID)
 		return nil
 	end
 	if iconCache[bundleID] == nil then
-		iconCache[bundleID] = hs.image.imageFromAppBundle(bundleID) or false
+		-- Do not negatively cache failures: applications may still be registering
+		-- with Launch Services while Hammerspoon starts.
+		iconCache[bundleID] = hs.image.imageFromAppBundle(bundleID)
 	end
-	return iconCache[bundleID] or nil
+	return iconCache[bundleID]
 end
 
-function Icons.prefetch(list, onDone, onProgress)
+function Icons.cancelPrefetch()
+	prefetchGeneration = prefetchGeneration + 1
+	if prefetchTimer then
+		prefetchTimer:stop()
+		prefetchTimer = nil
+	end
+end
+
+function Icons.prefetch(list, onDone)
+	Icons.cancelPrefetch()
+	local generation = prefetchGeneration
 	local index = 0
 	local function step()
-		index = index + 1
-		if index > #list then
+		prefetchTimer = nil
+		if generation ~= prefetchGeneration then
+			return
+		end
+
+		local lastIndex = math.min(index + PREFETCH_BATCH_SIZE, #list)
+		while index < lastIndex do
+			index = index + 1
+			local bundleID = list[index].bundleID or list[index].bundleId
+			list[index].icon = Icons.load(bundleID)
+		end
+
+		if index >= #list then
 			if onDone then
 				onDone()
 			end
 			return
 		end
-		local bundleID = list[index].bundleID or list[index].bundleId
-		list[index].icon = Icons.load(bundleID)
-		if onProgress then
-			onProgress(list[index])
-		end
-		hs.timer.doAfter(0, step)
+
+		-- Keep a strong reference until the one-shot timer fires. Hammerspoon may
+		-- otherwise collect zero-delay timers before their callback runs.
+		prefetchTimer = hs.timer.doAfter(PREFETCH_DELAY, step)
 	end
-	hs.timer.doAfter(0, step)
+
+	-- Fill the first batch immediately, then yield between subsequent batches.
+	step()
 end
 
 function Icons.bundleID(appName)

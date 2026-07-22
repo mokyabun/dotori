@@ -3,7 +3,7 @@ import type { Context } from 'dotori'
 export default (ctx: Context) => {
     ctx.brew.cask('claude-code')
     ctx.brew.cask('codex')
-    ctx.brew.cask('codex-app')
+    ctx.brew.cask('chatgpt')
 
     ctx.brew.install('poppler')
     ctx.brew.install('qpdf')

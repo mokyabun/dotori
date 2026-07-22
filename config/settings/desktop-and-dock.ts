@@ -39,7 +39,8 @@ export default (ctx: Context) => {
             EnableStandardClickToShowDesktop: false,
 
             // Desktop & Dock > Show Items > On Desktop
-            StandardHideDesktopIcons: true,
+            // yabai requires desktop items to remain enabled for reliable empty-Space focus.
+            StandardHideDesktopIcons: false,
 
             // Desktop & Dock > Widgets > Show Widgets > On Desktop
             StandardHideWidgets: true,
@@ -89,7 +90,7 @@ export default (ctx: Context) => {
         mode: 'patch',
         values: {
             // Mission Control > Displays have separate Spaces
-            'spans-displays': true,
+            'spans-displays': false,
         },
     })
 }

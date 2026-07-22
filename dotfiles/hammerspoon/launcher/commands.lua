@@ -2,6 +2,8 @@ local colors = require("lib.colors")
 local notify = require("lib.notify")
 local socket = require("lib.socket")
 
+local activeTasks = {}
+
 local function getCaffeinate(key)
 	return hs.caffeinate.get(key)
 end
@@ -37,6 +39,36 @@ local function notifyCaffeinate(mode)
 			subtitle = "Normal sleep policy restored",
 			color = colors.overlay1,
 		})
+	end
+end
+
+local function restartLaunchAgent(label, name, icon, logName)
+	local output = hs.execute("/usr/bin/id -u") or ""
+	local uid = output:match("%d+")
+	if not uid then
+		notify.show({
+			icon = icon,
+			title = name .. " Reload Failed",
+			subtitle = "Could not resolve the user ID",
+			color = colors.red,
+		})
+		return
+	end
+
+	local task
+	task = hs.task.new("/bin/launchctl", function(exitCode)
+		activeTasks[task] = nil
+		local succeeded = exitCode == 0
+		notify.show({
+			icon = icon,
+			title = name .. (succeeded and " Reloaded" or " Reload Failed"),
+			subtitle = succeeded and "Config reloaded" or ("Check " .. logName),
+			color = succeeded and colors.lavender or colors.red,
+		})
+	end, { "kickstart", "-k", "gui/" .. uid .. "/" .. label })
+	if task then
+		activeTasks[task] = true
+		task:start()
 	end
 end
 
@@ -95,14 +127,14 @@ return {
 		text = "Reload yabai",
 		subText = "System",
 		fn = function()
-			hs.task.new("/opt/homebrew/bin/yabai", function()
-				notify.show({
-					icon = "YB",
-					title = "yabai Reloaded",
-					subtitle = "Config reloaded",
-					color = colors.lavender,
-				})
-			end, { "--restart-service" }):start()
+			restartLaunchAgent("yabai", "yabai", "YB", "yabai.err.log")
+		end,
+	},
+	{
+		text = "Reload skhd",
+		subText = "System",
+		fn = function()
+			restartLaunchAgent("skhd", "skhd", "SK", "skhd.err.log")
 		end,
 	},
 	{

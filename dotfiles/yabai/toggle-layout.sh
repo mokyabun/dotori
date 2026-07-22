@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-YABAI=/opt/homebrew/bin/yabai
 
-layout=$($YABAI -m query --spaces --space | jq -r .type)
+set -euo pipefail
+
+readonly CONFIG_DIR=${XDG_CONFIG_HOME:-"$HOME/.config"}/yabai
+# shellcheck source=/dev/null
+. "$CONFIG_DIR/lib.sh"
+
+layout=$("$YABAI_BIN" -m query --spaces --space | "$JQ_BIN" -r '.type')
 if [ "$layout" = "float" ]; then
-  $YABAI -m space --layout bsp
-  printf "yabai layout tiling" | nc -u -w0 127.0.0.1 9001
+  "$YABAI_BIN" -m space --layout bsp
+  notify_hammerspoon yabai layout tiling
 else
-  $YABAI -m space --layout float
-  printf "yabai layout floating" | nc -u -w0 127.0.0.1 9001
+  "$YABAI_BIN" -m space --layout float
+  notify_hammerspoon yabai layout floating
 fi

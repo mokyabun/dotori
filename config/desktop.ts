@@ -3,6 +3,17 @@ import type { Context } from 'dotori'
 
 export default (ctx: Context) => {
     const home = os.homedir()
+    const launchdPath = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+    const yabaiConfig = `${home}/.config/yabai/yabairc`
+    const skhdConfig = `${home}/.config/skhd/skhdrc`
+    const waitForConfig = (config: string, command: string[]) => [
+        '/bin/sh',
+        '-c',
+        'config=$1; shift; until [ -r "$config" ]; do /bin/sleep 1; done; exec "$@"',
+        'dotori-wait-for-config',
+        config,
+        ...command,
+    ]
 
     ctx.brew.tap('thusvill/livewallpaper')
     ctx.brew.trustCask('thusvill/livewallpaper/livewallpaper')
@@ -15,12 +26,24 @@ export default (ctx: Context) => {
     ctx.file.symlink('~/.config/yabai', '../dotfiles/yabai')
     ctx.file.symlink('~/.config/skhd', '../dotfiles/skhd')
     ctx.launchd.agent('yabai', {
-        ProgramArguments: ['/opt/homebrew/bin/yabai'],
+        ProgramArguments: waitForConfig(yabaiConfig, ['/opt/homebrew/bin/yabai', '--config', yabaiConfig]),
+        EnvironmentVariables: {
+            PATH: launchdPath,
+        },
+        StandardOutPath: `${home}/Library/Logs/yabai.out.log`,
+        StandardErrorPath: `${home}/Library/Logs/yabai.err.log`,
+        ProcessType: 'Interactive',
         RunAtLoad: true,
         KeepAlive: true,
     })
     ctx.launchd.agent('skhd', {
-        ProgramArguments: ['/opt/homebrew/bin/skhd'],
+        ProgramArguments: waitForConfig(skhdConfig, ['/opt/homebrew/bin/skhd', '-c', skhdConfig]),
+        EnvironmentVariables: {
+            PATH: launchdPath,
+        },
+        StandardOutPath: `${home}/Library/Logs/skhd.out.log`,
+        StandardErrorPath: `${home}/Library/Logs/skhd.err.log`,
+        ProcessType: 'Interactive',
         RunAtLoad: true,
         KeepAlive: true,
     })
@@ -34,11 +57,15 @@ export default (ctx: Context) => {
     ctx.file.symlink('~/.config/hammerspoon', '../dotfiles/hammerspoon')
 
     const hostname = process.env.HOSTNAME || os.hostname()
+    const hammerspoonProfile = hostname.toLowerCase().includes('macmini') ? 'macmini' : 'macbook'
+    const hammerspoonConfig = `${home}/.config/hammerspoon/${hammerspoonProfile}_init.lua`
     ctx.macos.defaults('hammerspoon', 'org.hammerspoon.Hammerspoon', {
-        MJConfigFile: `${home}/.config/hammerspoon/${hostname}_init.lua`,
+        MJConfigFile: hammerspoonConfig,
     })
     ctx.launchd.agent('hammerspoon', {
-        ProgramArguments: ['/Applications/Hammerspoon.app/Contents/MacOS/Hammerspoon'],
+        ProgramArguments: waitForConfig(hammerspoonConfig, [
+            '/Applications/Hammerspoon.app/Contents/MacOS/Hammerspoon',
+        ]),
         RunAtLoad: true,
         KeepAlive: true,
     })

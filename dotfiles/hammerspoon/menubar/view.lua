@@ -16,8 +16,21 @@ local function styled(str, size, color)
 end
 
 local function screenWorkspaces(state, screen)
-	local name = screen:name()
+	local name = screen:getUUID()
 	return (name and state.workspacesByMonitorName and state.workspacesByMonitorName[name]) or state.workspaces
+end
+
+local function screenIsFullscreen(state, screen)
+	local name = screen:getUUID()
+	return name and state.fullscreenByMonitorName and state.fullscreenByMonitorName[name] or false
+end
+
+local function updateVisibility(entry, state)
+	if screenIsFullscreen(state, entry.screen) then
+		entry.canvas:hide()
+	else
+		entry.canvas:show()
+	end
 end
 
 local function drawOn(canvas, h, state, screen)
@@ -42,8 +55,9 @@ local function drawOn(canvas, h, state, screen)
 		})
 	end
 
-	local function textItem(str, size, color, iy)
+	local function textItem(str, size, color, iy, id)
 		canvas:appendElements({
+			id = id,
 			type = "text",
 			text = styled(str, size, color),
 			frame = {
@@ -84,7 +98,7 @@ local function drawOn(canvas, h, state, screen)
 	divLine(botDiv)
 	local bottomY = botDiv + C.DIV_H + C.SECTION_GAP
 	textItem(caffeineText, C.CAFFEINE_SIZE, caffeineColor, bottomY)
-	textItem(state.power or "—", C.POWER_SIZE, C.DIM, bottomY + C.ITEM_H + C.ITEM_GAP)
+	textItem(state.power or "—", C.POWER_SIZE, C.DIM, bottomY + C.ITEM_H + C.ITEM_GAP, "power")
 
 	-- MIDDLE: workspaces, vertically centered in the remaining space
 	local midStart = topDiv + C.DIV_H + C.SECTION_GAP
@@ -124,15 +138,24 @@ function View.init(state)
 			h = sf.h,
 		})
 		canvas:level(hs.canvas.windowLevels["mainMenu"])
+		canvas:behavior({ "canJoinAllSpaces", "stationary" })
 		drawOn(canvas, sf.h, state, screen)
-		canvas:show()
-		entries[screen:id()] = { canvas = canvas, h = sf.h, screen = screen }
+		local entry = { canvas = canvas, h = sf.h, screen = screen }
+		entries[screen:id()] = entry
+		updateVisibility(entry, state)
 	end
 end
 
 function View.refresh(state)
 	for _, e in pairs(entries) do
 		drawOn(e.canvas, e.h, state, e.screen)
+		updateVisibility(e, state)
+	end
+end
+
+function View.refreshPower(state)
+	for _, entry in pairs(entries) do
+		entry.canvas["power"].text = styled(state.power or "—", C.POWER_SIZE, C.DIM)
 	end
 end
 

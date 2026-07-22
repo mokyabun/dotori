@@ -62,6 +62,9 @@ export default (ctx: Context) => {
     ctx.macos.plist('finder', 'com.apple.finder', {
         mode: 'patch',
         values: {
+            // Keep the Finder Desktop window active; yabai needs it to focus empty Spaces reliably.
+            CreateDesktop: true,
+
             // Finder > Settings > Advanced > Show all filename extensions is complemented by hidden file visibility.
             AppleShowAllFiles: true,
 

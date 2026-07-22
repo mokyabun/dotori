@@ -14,9 +14,9 @@ local function buildChoices()
 
 	local runningApps = {}
 	for _, app in ipairs(hs.application.runningApplications()) do
-		local name = app:name()
-		if name then
-			runningApps[name] = true
+		local bundleId = app:bundleID()
+		if bundleId then
+			runningApps[bundleId] = true
 		end
 	end
 
@@ -33,7 +33,7 @@ local function buildChoices()
 		registry[key] = { kind = "app", path = app.path, bundleId = app.bundleId }
 		choices[#choices + 1] = {
 			text = app.name,
-			subText = runningApps[app.name] and "Running" or "",
+			subText = runningApps[app.bundleId] and "Running" or "",
 			image = app.icon,
 			uuid = key,
 		}
@@ -71,6 +71,8 @@ local function onChoice(item)
 end
 
 local function show()
+	-- Background prefetch normally finishes during startup. This fallback keeps
+	-- icons reliable when the chooser is opened immediately after a reload.
 	apps.ensureIcons()
 	chooser:choices(buildChoices())
 	chooser:show()

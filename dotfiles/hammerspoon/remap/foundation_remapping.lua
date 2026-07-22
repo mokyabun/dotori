@@ -11,7 +11,7 @@ local FOUNDATION_REMAPPING_VERSION = '0.1.1'
 local log = hs.logger.new('foundation_remapping', 'debug')
 
 
-CFundationRemap = {
+local CFundationRemap = {
     version = FOUNDATION_REMAPPING_VERSION,
 }
 

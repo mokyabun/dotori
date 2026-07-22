@@ -35,23 +35,9 @@ function Frecency.record(bundleId)
 end
 
 function Frecency.sort(appList)
-	local quotedIds = {}
-	for _, app in ipairs(appList) do
-		quotedIds[#quotedIds + 1] = "'" .. app.bundleId .. "'"
-	end
-
 	local scores = {}
-	if #quotedIds > 0 then
-		for row in
-			db:nrows(
-				"SELECT bundle_id, launches, last_used FROM app_frecency"
-					.. " WHERE bundle_id IN ("
-					.. table.concat(quotedIds, ",")
-					.. ")"
-			)
-		do
-			scores[row.bundle_id] = row.launches * getTimeWeight(row.last_used)
-		end
+	for row in db:nrows("SELECT bundle_id, launches, last_used FROM app_frecency") do
+		scores[row.bundle_id] = row.launches * getTimeWeight(row.last_used)
 	end
 
 	table.sort(appList, function(appA, appB)

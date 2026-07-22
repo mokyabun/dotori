@@ -20,6 +20,7 @@ local windowList = {}
 local selectedIndex = 1
 local isActive = false
 local switcherCanvas = nil
+local focusTask
 
 local function queryWindows(includeAllWorkspaces)
 	local flag = includeAllWorkspaces and "" or " --space"
@@ -188,14 +189,23 @@ end
 
 local function confirmSelection()
 	if isActive and #windowList > 0 then
-		hs.execute(YABAI_BIN .. " -m window --focus " .. windowList[selectedIndex].windowId)
+		local task
+		task = hs.task.new(YABAI_BIN, function()
+			if focusTask == task then
+				focusTask = nil
+			end
+		end, { "-m", "window", "--focus", windowList[selectedIndex].windowId })
+		if task then
+			focusTask = task
+			task:start()
+		end
 	end
 	destroySwitcher()
 end
 
 local ESCAPE_KEYCODE = 53
 
-tapKeyDown = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(event)
+local tapKeyDown = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(event)
 	local flags = event:getFlags()
 	local chars = event:getCharacters()
 	local keyCode = event:getKeyCode()
@@ -222,7 +232,7 @@ tapKeyDown = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(event
 	return false
 end)
 
-tapFlagsChanged = hs.eventtap.new({ hs.eventtap.event.types.flagsChanged }, function(event)
+local tapFlagsChanged = hs.eventtap.new({ hs.eventtap.event.types.flagsChanged }, function(event)
 	if isActive and not event:getFlags()["cmd"] then
 		confirmSelection()
 	end
@@ -231,3 +241,8 @@ end)
 
 tapKeyDown:start()
 tapFlagsChanged:start()
+
+return {
+	keyDown = tapKeyDown,
+	flagsChanged = tapFlagsChanged,
+}
