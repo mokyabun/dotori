@@ -12,4 +12,6 @@ export default (ctx: Context) => {
     })
     ctx.brew.cask('bambu-studio')
     ctx.brew.cask('blender')
+    ctx.brew.cask('keka')
+    ctx.brew.cask('iina')
 }
