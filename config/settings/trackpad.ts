@@ -5,7 +5,7 @@ export default (ctx: Context) => {
         mode: 'patch',
         values: {
             // Trackpad > Point & Click > Tap to click
-            Clicking: 0,
+            Clicking: 1,
 
             // Trackpad > Point & Click > Secondary click
             TrackpadRightClick: true,
@@ -52,7 +52,7 @@ export default (ctx: Context) => {
         mode: 'patch',
         values: {
             // External Apple trackpad > Point & Click > Tap to click
-            Clicking: 0,
+            Clicking: 1,
 
             // External Apple trackpad > Point & Click > Secondary click
             TrackpadRightClick: true,
@@ -95,6 +95,9 @@ export default (ctx: Context) => {
     ctx.macos.plist('trackpad.global', 'NSGlobalDomain', {
         mode: 'patch',
         values: {
+            // Trackpad > Point & Click > Tap to click
+            'com.apple.mouse.tapBehavior': 1,
+
             // Trackpad > Point & Click > Force Click and haptic feedback
             'com.apple.trackpad.forceClick': true,
         },
