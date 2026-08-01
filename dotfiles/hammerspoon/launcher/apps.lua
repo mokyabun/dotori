@@ -1,4 +1,5 @@
 local config = require("launcher.constants")
+local blacklist = require("launcher.blacklist")
 local icons = require("lib.icons")
 
 local Apps = {}
@@ -8,11 +9,26 @@ Apps.cache = {}
 local dirWatchers = {}
 local debounceTimer
 
+local function toSet(values)
+	local set = {}
+	for _, value in ipairs(values or {}) do
+		set[value] = true
+	end
+	return set
+end
+
+local blacklistedBundleIds = toSet(blacklist.bundleIds)
+local blacklistedNames = toSet(blacklist.names)
+
+local function isBlacklisted(appName, bundleId)
+	return blacklistedNames[appName] or blacklistedBundleIds[bundleId]
+end
+
 local function addApp(result, seen, appPath)
 	local appName = appPath:match("([^/]+)%.app$")
 	local info = appName and hs.application.infoForBundlePath(appPath)
 	local bundleId = info and info["CFBundleIdentifier"]
-	if bundleId and not seen[bundleId] then
+	if bundleId and not seen[bundleId] and not isBlacklisted(appName, bundleId) then
 		seen[bundleId] = true
 		result[#result + 1] = { name = appName, path = appPath, bundleId = bundleId }
 	end
@@ -45,12 +61,7 @@ local function scan()
 		scanDirectory(result, seen, dir, 1)
 	end
 
-	local finderPath = "/System/Library/CoreServices/Finder.app"
-	local finderInfo = hs.application.infoForBundlePath(finderPath)
-	local finderBundleId = finderInfo and finderInfo["CFBundleIdentifier"]
-	if finderBundleId and not seen[finderBundleId] then
-		result[#result + 1] = { name = "Finder", path = finderPath, bundleId = finderBundleId }
-	end
+	addApp(result, seen, "/System/Library/CoreServices/Finder.app")
 
 	return result
 end

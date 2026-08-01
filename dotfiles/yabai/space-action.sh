@@ -14,8 +14,12 @@ case "$direction" in
   *) die "unknown direction: $direction" ;;
 esac
 
-space=$("$YABAI_BIN" -m query --spaces --space "$direction" 2>/dev/null | "$JQ_BIN" -r '.index // empty')
-[ -n "$space" ] || exit 0
+current_display=$("$YABAI_BIN" -m query --spaces --space | "$JQ_BIN" -r '.display // empty')
+target=$("$YABAI_BIN" -m query --spaces --space "$direction" 2>/dev/null || true)
+space=$(printf '%s' "$target" | "$JQ_BIN" -r '.index // empty')
+target_display=$(printf '%s' "$target" | "$JQ_BIN" -r '.display // empty')
+
+[ -n "$space" ] && [ "$target_display" = "$current_display" ] || exit 0
 
 case "$action" in
   focus)

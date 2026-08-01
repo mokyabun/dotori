@@ -46,3 +46,9 @@ window=$(
 }
 
 "$YABAI_BIN" -m window "$window" --toggle float
+
+layout=$(
+  "$YABAI_BIN" -m query --windows --window "$window" |
+    "$JQ_BIN" -r 'if .["is-floating"] then "floating" else "bsp" end'
+)
+notify_hammerspoon yabai window-layout "$layout"

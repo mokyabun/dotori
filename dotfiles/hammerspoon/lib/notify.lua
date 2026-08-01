@@ -1,4 +1,5 @@
 local colors = require("lib.colors")
+local palette = colors.dracula
 
 local Notify = {}
 
@@ -42,7 +43,7 @@ function Notify.show(options)
 
 	close()
 
-	local accent = options.color or colors.lavender
+	local accent = options.color or palette.purple
 	local title = options.title or ""
 	local subtitle = options.subtitle or options.subText or ""
 	local icon = options.icon or ""
@@ -65,9 +66,17 @@ function Notify.show(options)
 		{
 			type = "rectangle",
 			action = "fill",
-			fillColor = colors.withAlpha(colors.base, 0.84),
+			fillColor = colors.withAlpha(palette.background, 0.94),
 			roundedRectRadii = { xRadius = 8, yRadius = 8 },
 			frame = { x = 0, y = 0, w = WIDTH, h = HEIGHT },
+		},
+		{
+			type = "rectangle",
+			action = "stroke",
+			strokeColor = colors.withAlpha(palette.currentLine, 0.96),
+			strokeWidth = 1,
+			roundedRectRadii = { xRadius = 8, yRadius = 8 },
+			frame = { x = 0.5, y = 0.5, w = WIDTH - 1, h = HEIGHT - 1 },
 		},
 		{
 			type = "text",

@@ -1,6 +1,7 @@
 local colors = require("lib.colors")
 local notify = require("lib.notify")
 local socket = require("lib.socket")
+local palette = colors.dracula
 
 local activeTasks = {}
 
@@ -23,21 +24,21 @@ local function notifyCaffeinate(mode)
 			icon = "CA",
 			title = "Caffeinate On",
 			subtitle = "Display and system stay awake",
-			color = colors.green,
+			color = palette.green,
 		})
 	elseif mode == "system" then
 		notify.show({
 			icon = "SY",
 			title = "System Caffeinate On",
 			subtitle = "System stays awake, display may sleep",
-			color = colors.yellow,
+			color = palette.yellow,
 		})
 	else
 		notify.show({
 			icon = "ZZ",
 			title = "Caffeinate Off",
 			subtitle = "Normal sleep policy restored",
-			color = colors.overlay1,
+			color = palette.comment,
 		})
 	end
 end
@@ -50,7 +51,7 @@ local function restartLaunchAgent(label, name, icon, logName)
 			icon = icon,
 			title = name .. " Reload Failed",
 			subtitle = "Could not resolve the user ID",
-			color = colors.red,
+			color = palette.red,
 		})
 		return
 	end
@@ -63,7 +64,7 @@ local function restartLaunchAgent(label, name, icon, logName)
 			icon = icon,
 			title = name .. (succeeded and " Reloaded" or " Reload Failed"),
 			subtitle = succeeded and "Config reloaded" or ("Check " .. logName),
-			color = succeeded and colors.lavender or colors.red,
+			color = succeeded and palette.purple or palette.red,
 		})
 	end, { "kickstart", "-k", "gui/" .. uid .. "/" .. label })
 	if task then
@@ -188,7 +189,7 @@ return {
 							icon = "RD",
 							title = "RAM Disk Ready",
 							subtitle = "/Volumes/RAMDisk",
-							color = colors.teal,
+							color = palette.cyan,
 						})
 					end,
 					{ "-c", 'diskutil erasevolume HFS+ "RAMDisk" $(hdiutil attach -nomount ram://33554432)' }
@@ -205,7 +206,7 @@ return {
 					icon = "RD",
 					title = "RAM Disk Ejected",
 					subtitle = "/Volumes/RAMDisk",
-					color = colors.peach,
+					color = palette.orange,
 				})
 			end, { "-c", "diskutil eject RAMDisk" }):start()
 		end,

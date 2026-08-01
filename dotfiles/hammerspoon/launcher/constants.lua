@@ -1,4 +1,5 @@
 local colors = require("lib.colors")
+local palette = colors.dracula
 
 return {
 	hotkey = { mods = { "cmd" }, key = "space" },
@@ -8,5 +9,5 @@ return {
 		os.getenv("HOME") .. "/Applications",
 	},
 	dbPath = hs.configdir .. "/data/launcher.db",
-	chooser = { width = 36, rows = 10, fgColor = colors.text, subTextColor = colors.subtext0 },
+	chooser = { width = 36, rows = 10, fgColor = palette.foreground, subTextColor = palette.comment },
 }

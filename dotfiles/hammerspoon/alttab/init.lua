@@ -1,5 +1,6 @@
 local colors = require("lib.colors")
 local icons = require("lib.icons")
+local palette = colors.dracula
 
 local YABAI_BIN = "/opt/homebrew/bin/yabai"
 
@@ -77,14 +78,14 @@ local function buildCanvas()
 	switcherCanvas:appendElements({
 		type = "rectangle",
 		action = "fill",
-		fillColor = colors.withAlpha(colors.mantle, 0.97),
+		fillColor = colors.withAlpha(palette.background, 0.97),
 		frame = { x = 0, y = 0, w = PANEL_W, h = panelH },
 	})
 
 	switcherCanvas:appendElements({
 		type = "rectangle",
 		action = "fill",
-		fillColor = colors.surface1,
+		fillColor = palette.currentLine,
 		frame = { x = 0, y = PAD_Y, w = PANEL_W, h = ITEM_H },
 	})
 
@@ -112,7 +113,7 @@ local function buildCanvas()
 		switcherCanvas:appendElements({
 			type = "text",
 			text = win.app,
-			textColor = colors.text,
+			textColor = palette.foreground,
 			textSize = 13,
 			textAlignment = "left",
 			frame = { x = 0, y = 0, w = PANEL_W - TEXT_X - PAD_X, h = 18 },
@@ -120,7 +121,7 @@ local function buildCanvas()
 		switcherCanvas:appendElements({
 			type = "text",
 			text = win.title,
-			textColor = colors.overlay2,
+			textColor = palette.comment,
 			textSize = 11,
 			textAlignment = "left",
 			frame = { x = 0, y = 0, w = PANEL_W - TEXT_X - PAD_X, h = 16 },

@@ -10,6 +10,8 @@ local state = {
 	focused = nil,
 	layout = "tiling",
 	power = nil,
+	cpu = nil,
+	ram = nil,
 	caffeinate = { display = false, system = false },
 }
 
@@ -137,67 +139,133 @@ refreshCaffeinate()
 view.init(state)
 refreshTopology()
 
--- Clock: tick aligned to minute boundaries
-local clockTimer, syncTimer
-
-local function startClockTimer()
-	if clockTimer then
-		clockTimer:stop()
-	end
-	clockTimer = hs.timer.new(60, function()
-		refreshView()
-	end)
-	clockTimer:start()
-end
+-- Clock: use a new one-shot timer for every tick so delayed callbacks never
+-- make the clock drift away from wall-clock minute boundaries.
+local clockTimer
 
 local function scheduleClock()
-	if syncTimer then
-		syncTimer:stop()
-	end
 	if clockTimer then
 		clockTimer:stop()
-		clockTimer = nil
 	end
-	local delay = 60 - (os.time() % 60)
-	syncTimer = hs.timer.doAfter(delay, function()
-		refreshView()
-		startClockTimer()
-		syncTimer = nil
+	local delay = 60 - (hs.timer.secondsSinceEpoch() % 60)
+	clockTimer = hs.timer.doAfter(delay, function()
+		view.refreshClock()
+		scheduleClock()
 	end)
 end
 
 scheduleClock()
 
--- Wake from sleep: refresh immediately and resync clock
+-- Display changes arrive in bursts after wake. Coalesce normal screen events,
+-- then retry a few times because some external displays appear several seconds
+-- after systemDidWake without producing a reliable final watcher callback.
+local screenRefreshTimer
+local wakeScreenRefreshTimers = {}
+
+local function refreshScreens()
+	refreshCaffeinate()
+	view.init(state)
+	refreshTopology()
+end
+
+local function scheduleScreenRefresh(delay)
+	if screenRefreshTimer then
+		screenRefreshTimer:stop()
+	end
+	screenRefreshTimer = hs.timer.doAfter(delay or 1, function()
+		screenRefreshTimer = nil
+		refreshScreens()
+	end)
+end
+
+local function scheduleWakeScreenRefreshes()
+	for _, timer in ipairs(wakeScreenRefreshTimers) do
+		timer:stop()
+	end
+	wakeScreenRefreshTimers = {}
+
+	for _, delay in ipairs({ 1, 3, 6, 10 }) do
+		wakeScreenRefreshTimers[#wakeScreenRefreshTimers + 1] = hs.timer.doAfter(delay, refreshScreens)
+	end
+end
+
+-- Wake from sleep: refresh immediately, resync the clock, then let displays settle.
 local caffeWatcher = hs.caffeinate.watcher.new(function(event)
 	if event == hs.caffeinate.watcher.systemDidWake or event == hs.caffeinate.watcher.screensDidWake then
 		refreshView()
 		scheduleClock()
+		scheduleWakeScreenRefreshes()
 	end
 end)
 caffeWatcher:start()
 
--- Power: stream from macmon, restart on crash
+-- System metrics: reuse the macmon power stream for CPU and RAM as well.
 local powerTask
 local powerRestartTimer
+local powerBuffer = ""
+
+local function usagePercent(value)
+	if type(value) ~= "number" then
+		return nil
+	end
+	local percent = value <= 1 and value * 100 or value
+	return math.max(0, math.min(100, math.floor(percent + 0.5)))
+end
+
+local function applyMetrics(data)
+	local changed = false
+	if data.sys_power then
+		local power = string.format("%.1fW", data.sys_power)
+		if power ~= state.power then
+			state.power = power
+			changed = true
+		end
+	end
+
+	local cpuPercent = usagePercent(data.cpu_usage_pct)
+	if cpuPercent then
+		local cpu = string.format("%d%%", cpuPercent)
+		if cpu ~= state.cpu then
+			state.cpu = cpu
+			changed = true
+		end
+	end
+
+	local memory = data.memory
+	if memory and memory.ram_usage then
+		local ram = string.format("%.0fG", memory.ram_usage / (1024 ^ 3))
+		if ram ~= state.ram then
+			state.ram = ram
+			changed = true
+		end
+	end
+
+	if changed then
+		view.refreshMetrics(state)
+	end
+end
 
 local function startPowerStream()
 	if powerRestartTimer then
 		powerRestartTimer:stop()
 		powerRestartTimer = nil
 	end
+	powerBuffer = ""
 	powerTask = hs.task.new("/opt/homebrew/bin/macmon", function()
 		powerTask = nil
 		powerRestartTimer = hs.timer.doAfter(5, startPowerStream)
 	end, function(_, stdout, _)
-		for line in stdout:gmatch("[^\n]+") do
+		powerBuffer = powerBuffer .. stdout
+		while true do
+			local newline = powerBuffer:find("\n", 1, true)
+			if not newline then
+				break
+			end
+			local line = powerBuffer:sub(1, newline - 1)
+			powerBuffer = powerBuffer:sub(newline + 1)
 			local ok, data = pcall(hs.json.decode, line)
-			if ok and data and data.sys_power then
-				local power = string.format("%.1fW", data.sys_power)
-				if power ~= state.power then
-					state.power = power
-					view.refreshPower(state)
-				end
+			if ok and data then
+				applyMetrics(data)
 			end
 		end
 		return true
@@ -211,11 +279,9 @@ end
 
 startPowerStream()
 
--- Screen layout changes: recreate bars
+-- Screen layout changes: wait for the current burst of display events to settle.
 local screenWatcher = hs.screen.watcher.new(function()
-	refreshCaffeinate()
-	view.init(state)
-	refreshTopology()
+	scheduleScreenRefresh()
 end)
 screenWatcher:start()
 

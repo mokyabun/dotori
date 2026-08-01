@@ -9,7 +9,7 @@ readonly CONFIG_DIR=${XDG_CONFIG_HOME:-"$HOME/.config"}/yabai
 layout=$("$YABAI_BIN" -m query --spaces --space | "$JQ_BIN" -r '.type')
 if [ "$layout" = "float" ]; then
   "$YABAI_BIN" -m space --layout bsp
-  notify_hammerspoon yabai layout tiling
+  notify_hammerspoon yabai layout bsp
 else
   "$YABAI_BIN" -m space --layout float
   notify_hammerspoon yabai layout floating

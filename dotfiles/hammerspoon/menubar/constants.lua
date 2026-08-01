@@ -1,5 +1,5 @@
 local colors = require("lib.colors")
-local palette = colors.mocha
+local palette = colors.dracula
 
 return {
 	-- Layout
@@ -22,14 +22,15 @@ return {
 	DAY_SIZE = 10,
 	POWER_SIZE = 10,
 	CAFFEINE_SIZE = 10,
+	METRIC_SIZE = 10,
 
 	-- Colors
-	BG = colors.withAlpha(palette.mantle, 0.96),
-	ACTIVE_BG = palette.surface1,
-	DIV = colors.withAlpha(palette.surface0, 0.6),
-	TEXT = palette.text,
-	MUTED = palette.overlay2,
-	DIM = palette.overlay1,
+	BG = colors.withAlpha(palette.background, 0.96),
+	ACTIVE_BG = palette.currentLine,
+	DIV = colors.withAlpha(palette.currentLine, 0.6),
+	TEXT = palette.foreground,
+	MUTED = palette.comment,
+	DIM = colors.withAlpha(palette.comment, 0.72),
 	GOOD = palette.green,
 	WARN = palette.yellow,
 }

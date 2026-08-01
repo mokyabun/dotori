@@ -1,6 +1,10 @@
 import type { Context } from 'dotori'
 
-const BASE_EXTENSIONS = ['Catppuccin.catppuccin-vsc', 'thang-nm.catppuccin-perfect-icons', 'EditorConfig.EditorConfig']
+const BASE_EXTENSIONS = [
+    'dracula-theme.theme-dracula',
+    'thang-nm.catppuccin-perfect-icons',
+    'EditorConfig.EditorConfig',
+]
 
 const VSCODE_FILE_NESTING_CAPTURE = ['$', '{capture}'].join('')
 
@@ -61,7 +65,7 @@ export const BASE_SETTINGS = {
         '**/.git': true,
     },
 
-    'workbench.colorTheme': 'Catppuccin Latte',
+    'workbench.colorTheme': 'Dracula Theme',
     'workbench.iconTheme': 'Catppuccin Perfect Latte',
 
     'workbench.welcomePage.walkthroughs.openOnInstall': false,
