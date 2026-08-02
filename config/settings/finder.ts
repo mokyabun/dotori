@@ -90,16 +90,16 @@ export default (ctx: Context) => {
             ShowStatusBar: true,
 
             // Finder > Settings > General > Show these items on the desktop > Hard disks
-            ShowHardDrivesOnDesktop: true,
+            ShowHardDrivesOnDesktop: false,
 
             // Finder > Settings > General > Show these items on the desktop > External disks
-            ShowExternalHardDrivesOnDesktop: true,
+            ShowExternalHardDrivesOnDesktop: false,
 
             // Finder > Settings > General > Show these items on the desktop > CDs, DVDs, and iPods
             ShowRemovableMediaOnDesktop: true,
 
             // Finder > Settings > General > Show these items on the desktop > Connected servers
-            ShowMountedServersOnDesktop: true,
+            ShowMountedServersOnDesktop: false,
 
             // Finder list view defaults: visible columns, icon size, sort column, and relative dates.
             FK_DefaultListViewSettings: finderListViewSettings,
