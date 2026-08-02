@@ -157,10 +157,9 @@ end
 scheduleClock()
 
 -- Display changes arrive in bursts after wake. Coalesce normal screen events,
--- then retry a few times because some external displays appear several seconds
--- after systemDidWake without producing a reliable final watcher callback.
+-- then reload once after the external displays have had time to settle.
 local screenRefreshTimer
-local wakeScreenRefreshTimers = {}
+local wakeReloadTimer
 
 local function refreshScreens()
 	refreshCaffeinate()
@@ -178,23 +177,23 @@ local function scheduleScreenRefresh(delay)
 	end)
 end
 
-local function scheduleWakeScreenRefreshes()
-	for _, timer in ipairs(wakeScreenRefreshTimers) do
-		timer:stop()
+local function scheduleWakeReload()
+	if wakeReloadTimer then
+		wakeReloadTimer:stop()
 	end
-	wakeScreenRefreshTimers = {}
-
-	for _, delay in ipairs({ 1, 3, 6, 10 }) do
-		wakeScreenRefreshTimers[#wakeScreenRefreshTimers + 1] = hs.timer.doAfter(delay, refreshScreens)
-	end
+	wakeReloadTimer = hs.timer.doAfter(10, function()
+		wakeReloadTimer = nil
+		hs.reload()
+	end)
 end
 
--- Wake from sleep: refresh immediately, resync the clock, then let displays settle.
+-- Wake from sleep: refresh immediately, then perform one clean reload 10 seconds
+-- after the latest wake event. Both wake events may fire for the same resume.
 local caffeWatcher = hs.caffeinate.watcher.new(function(event)
 	if event == hs.caffeinate.watcher.systemDidWake or event == hs.caffeinate.watcher.screensDidWake then
 		refreshView()
 		scheduleClock()
-		scheduleWakeScreenRefreshes()
+		scheduleWakeReload()
 	end
 end)
 caffeWatcher:start()
