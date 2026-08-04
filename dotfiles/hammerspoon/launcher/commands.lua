@@ -111,13 +111,6 @@ return {
 		end,
 	},
 	{
-		text = "Empty Trash",
-		subText = "System",
-		fn = function()
-			hs.applescript('tell application "Finder" to empty trash')
-		end,
-	},
-	{
 		text = "Reload Hammerspoon",
 		subText = "System",
 		fn = function()
