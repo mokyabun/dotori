@@ -18,7 +18,7 @@ export type DotoriProviderFactory<TProviders extends Record<string, unknown> = R
     scope: ProviderScope,
 ) => TProviders
 
-export interface DotoriOptions {
+export interface DotoriRuntimeOptions {
     configCwd: string
     env?: Partial<DotoriEnv>
     providers?: DotoriProviderFactory[]
@@ -60,7 +60,7 @@ export function makeApplyContext(): ApplyContext {
     }
 }
 
-export function createDotori(options: DotoriOptions): DotoriRuntime {
+export function createRuntime(options: DotoriRuntimeOptions): DotoriRuntime {
     const queue: Queue = []
     const env: DotoriEnv = {
         username: os.userInfo().username,

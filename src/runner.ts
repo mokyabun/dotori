@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { createDotori, type DotoriContext, type DotoriOptions, type Queue } from './context'
+import { createRuntime, type DotoriContext, type DotoriRuntimeOptions, type Queue } from './context'
 import type { MaybePromise } from './types'
 
 export type DotoriConfig = (ctx: DotoriContext) => MaybePromise<void>
@@ -26,13 +26,13 @@ function resolveConfigPath(configPath: string): string {
     throw new Error(`Config file not found: ${resolved}`)
 }
 
-export async function createQueue(config: DotoriConfig, options: DotoriOptions): Promise<Queue> {
-    const runtime = createDotori(options)
+export async function createQueue(config: DotoriConfig, options: DotoriRuntimeOptions): Promise<Queue> {
+    const runtime = createRuntime(options)
     await config(runtime.context)
     return runtime.queue
 }
 
-export async function loadConfig(configPath: string, options: Partial<DotoriOptions> = {}): Promise<Queue> {
+export async function loadConfig(configPath: string, options: Partial<DotoriRuntimeOptions> = {}): Promise<Queue> {
     const resolved = resolveConfigPath(configPath)
 
     const mod = await import(pathToFileURL(resolved).href)
